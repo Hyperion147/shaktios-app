@@ -13,15 +13,16 @@ export const CITIZEN_SOURCE = 'citizen_app';
 export const CITIZEN_EVENT_TYPE = 'citizen_report';
 
 export const INCIDENT_CATEGORIES: IncidentCategory[] = [
-  { id: 'crowd', label: 'Crowd / overcrowding', hint: 'Density or crush risk observed' },
-  { id: 'medical', label: 'Medical emergency', hint: 'Someone needs medical help' },
-  { id: 'fire_smoke', label: 'Fire / smoke', hint: 'Fire, smoke, or burning smell' },
-  { id: 'suspicious', label: 'Suspicious activity', hint: 'Unattended items or odd behaviour' },
-  { id: 'lost_person', label: 'Lost person', hint: 'Missing child or person' },
-  { id: 'violence', label: 'Violence / conflict', hint: 'Fight or threatening behaviour' },
-  { id: 'infrastructure', label: 'Infrastructure issue', hint: 'Blocked exit, broken barrier, power' },
+  { id: 'crowd', label: 'Crowd / Stampede Risk', hint: 'Heavy pushing, overcrowding, crush risk' },
+  { id: 'medical', label: 'Medical Emergency', hint: 'Someone needs medical help' },
+  { id: 'lost_person', label: 'Lost Person', hint: 'Missing child or person' },
+  { id: 'fire_smoke', label: 'Fire / Smoke', hint: 'Fire, smoke, or burning smell' },
+  { id: 'suspicious', label: 'Suspicious Activity', hint: 'Unattended items or odd behaviour' },
   { id: 'other', label: 'Other', hint: 'Something else authorities should know' },
 ];
+
+/** Quick-pick textual zones. GPS stays optional; a plain label is enough. */
+export const LOCATION_PRESETS = ['Gate 4', 'Main Stage', 'North Entrance'];
 
 export const MOCK_VENUE_EVENTS = [
   {

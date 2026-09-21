@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { TextInput, View } from 'react-native';
+import { PLACEHOLDER_COLOR } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { Text } from '@/components/ui/text';
 
@@ -14,7 +15,7 @@ export function AppInput({ label, hint, error, className, ...props }: Props) {
     <View className="gap-1.5">
       <Text className="text-sm font-medium">{label}</Text>
       <TextInput
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={PLACEHOLDER_COLOR}
         className={cn(
           'rounded-lg border bg-background px-4 py-3 text-base text-foreground',
           error ? 'border-destructive' : 'border-border',

@@ -46,7 +46,7 @@ export default function ReviewScreen() {
         status: 'submitted',
         backendEventId: event.id,
       });
-      setDraft({ description: '' });
+      setDraft({ description: '', photoUri: null });
       router.replace({ pathname: '/submitted', params: { id: event.id } });
     } catch (e) {
       setError(normalizeError(e).message);
@@ -77,7 +77,13 @@ export default function ReviewScreen() {
           <Text variant="muted" className="text-xs uppercase">Location</Text>
           <Text className="font-semibold">{draft.locationLabel || '—'}</Text>
           <Text variant="muted">
-            {pendingLocation ? formatCoords(pendingLocation) : 'GPS not attached — zone label only'}
+            {pendingLocation ? formatCoords(pendingLocation) : 'Area name only — no GPS attached'}
+          </Text>
+        </Card>
+        <Card>
+          <Text variant="muted" className="text-xs uppercase">Photo</Text>
+          <Text className="font-semibold">
+            {draft.photoUri ? '1 photo attached (sent when upload is supported)' : 'No photo'}
           </Text>
         </Card>
       </View>
@@ -89,7 +95,7 @@ export default function ReviewScreen() {
       ) : null}
 
       <Pressable onPress={submit} disabled={busy} className="mt-6 rounded-xl bg-destructive py-4 disabled:opacity-50">
-        <Text className="text-center text-base font-bold text-white">
+        <Text className="text-center text-base font-bold text-destructive-foreground">
           {busy ? 'Submitting…' : 'Submit to ShaktiOS'}
         </Text>
       </Pressable>

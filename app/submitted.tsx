@@ -19,11 +19,10 @@ export default function SubmittedScreen() {
     <ScreenContainer className="justify-center gap-4">
       <View className="items-center gap-2">
         <View className="h-16 w-16 items-center justify-center rounded-full bg-primary">
-          <Text className="text-2xl font-bold text-primary-foreground">✓</Text>
-        </View>
+          <Text className="text-2xl font-bold text-primary-foreground">✓</Text>        </View>
         <Text variant="h3">Report submitted</Text>
         <Text variant="muted" className="text-center">
-          ShaktiOS received your observation and will correlate it with live incidents.
+          Your report has been sent to the safety operations team.
         </Text>
       </View>
 

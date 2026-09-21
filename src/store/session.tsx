@@ -9,6 +9,8 @@ interface ReportDraft {
   description: string;
   locationLabel: string;
   urgency: CitizenReport['urgency'];
+  /** Local-only until backend supports media upload. */
+  photoUri: string | null;
 }
 
 interface SessionState {
@@ -36,6 +38,7 @@ const DEFAULT_DRAFT: ReportDraft = {
   description: '',
   locationLabel: '',
   urgency: 'normal',
+  photoUri: null,
 };
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {

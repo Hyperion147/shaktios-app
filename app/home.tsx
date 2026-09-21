@@ -25,7 +25,7 @@ export default function HomeScreen() {
             <Text className="mt-0.5 text-lg font-bold">{activeEvent.name}</Text>
             {activeEvent.description ? <Text variant="muted">{activeEvent.description}</Text> : null}
             <Pressable onPress={() => router.push('/join')} className="mt-2">
-              <Text className="text-sm font-medium text-primary-foreground underline">Switch event</Text>
+              <Text className="text-sm font-medium text-primary underline">Switch event</Text>
             </Pressable>
           </Card>
         ) : (
@@ -48,8 +48,8 @@ export default function HomeScreen() {
         <Pressable
           onPress={() => router.push('/report')}
           className="rounded-2xl bg-destructive py-5 active:opacity-90">
-          <Text className="text-center text-lg font-bold text-white">Report incident</Text>
-          <Text className="text-center text-sm text-white/80">Takes under 30 seconds</Text>
+          <Text className="text-center text-lg font-bold text-destructive-foreground">Report incident</Text>
+          <Text className="text-center text-sm text-destructive-foreground/80">Takes under 30 seconds</Text>
         </Pressable>
 
         <View className="flex-row items-center justify-between">

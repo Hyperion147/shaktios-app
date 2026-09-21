@@ -25,11 +25,9 @@ export interface VenueEvent {
 export type IncidentCategoryId =
   | 'crowd'
   | 'medical'
+  | 'lost_person'
   | 'fire_smoke'
   | 'suspicious'
-  | 'lost_person'
-  | 'violence'
-  | 'infrastructure'
   | 'other';
 
 export interface IncidentCategory {
@@ -107,4 +105,30 @@ export interface ApiError {
   message: string;
   status?: number;
   code: string;
+}
+
+// ---- Spec-facing aliases (same models, canonical names) ----
+/** Provisional: backend has no venue-event registry yet; client-side only. */
+export type Event = VenueEvent;
+/** Citizen-facing category config; backend receives the id as a plain string. */
+export type ReportCategory = IncidentCategory;
+/** Structured GPS fix; always optional alongside the textual zone label. */
+export type Location = ReportLocation;
+/** Citizen-facing lifecycle; backend owns incident status separately. */
+export type ReportStatus = CitizenReportStatus;
+
+/**
+ * Provisional submission envelope.
+ * ReportsApi.submitReport() currently maps this onto the ACTUAL backend
+ * schema (POST /events, type "citizen_report"). `photoUri` is captured
+ * locally only — the backend MVP has no media upload yet.
+ */
+export interface ReportSubmission {
+  category: IncidentCategoryId;
+  description: string;
+  locationLabel: string;
+  urgency: CitizenReport['urgency'];
+  gps: ReportLocation | null;
+  photoUri: string | null;
+  eventId: string | null;
 }

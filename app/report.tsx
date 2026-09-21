@@ -3,11 +3,12 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
-import { AppInput } from '@/src/components/AppInput';
 import { IncidentCategorySelector } from '@/src/components/IncidentCategorySelector';
-import { LocationStatus } from '@/src/components/LocationStatus';
+import { LocationPicker } from '@/src/components/LocationPicker';
+import { PhotoPicker } from '@/src/components/PhotoPicker';
 import { useSession } from '@/src/store/session';
 import { captureLocation, type LocationState } from '@/src/utils/location';
+import { PLACEHOLDER_COLOR } from '@/lib/theme';
 
 const URGENCY = [
   { id: 'low', label: 'Not urgent' },
@@ -36,17 +37,13 @@ export default function ReportScreen() {
     }
   }, [setPendingLocation]);
 
-  React.useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
-
   const next = () => {
     if (!draft.description.trim() && draft.category === 'other') {
       setError('Please describe what you observed.');
       return;
     }
     if (!draft.locationLabel.trim()) {
-      setError('Zone / gate is required so the backend can correlate your report.');
+      setError('Tell us the area (e.g. Gate 4) so the safety team can find it.');
       return;
     }
     setError(null);
@@ -62,8 +59,8 @@ export default function ReportScreen() {
           </Pressable>
           <Text variant="h3" className="mt-1">What do you see?</Text>
           <Text variant="muted">
-            {activeEvent ? `Reporting at ${activeEvent.name}` : 'No event joined — location label is required'}.
-            Your observation goes to ShaktiOS; risk is assessed server-side.
+            {activeEvent ? `Reporting at ${activeEvent.name}` : 'No event joined yet'}.
+            Just the facts — ShaktiOS assesses everything else.
           </Text>
         </View>
 
@@ -73,12 +70,12 @@ export default function ReportScreen() {
         </View>
 
         <View className="gap-1.5">
-          <Text className="text-sm font-medium">Description</Text>
+          <Text className="text-sm font-medium">Describe what happened</Text>
           <TextInput
             multiline
             numberOfLines={3}
-            placeholder="e.g. Smoke near Gate 3, crowd pushing"
-            placeholderTextColor="#9ca3af"
+            placeholder="e.g. Heavy pushing near Gate 4 and someone fell"
+            placeholderTextColor={PLACEHOLDER_COLOR}
             value={draft.description}
             onChangeText={(t) => setDraft({ description: t })}
             className="min-h-[90px] rounded-lg border border-border bg-background px-4 py-3 text-base text-foreground"
@@ -86,14 +83,14 @@ export default function ReportScreen() {
           />
         </View>
 
-        <AppInput
-          label="Zone / gate (matches backend location)"
-          placeholder="e.g. gate_4"
-          autoCapitalize="none"
-          value={draft.locationLabel}
-          onChangeText={(t) => setDraft({ locationLabel: t })}
-          hint="Exact zone string — this is how reports correlate with incidents."
+        <LocationPicker
+          label={draft.locationLabel}
+          onLabelChange={(t) => setDraft({ locationLabel: t })}
+          locationState={locState}
+          onRetryLocation={requestLocation}
         />
+
+        <PhotoPicker photoUri={draft.photoUri} onChange={(uri) => setDraft({ photoUri: uri })} />
 
         <View className="gap-2">
           <Text className="text-sm font-medium">How urgent does this look?</Text>
@@ -109,11 +106,6 @@ export default function ReportScreen() {
               </Pressable>
             ))}
           </View>
-        </View>
-
-        <View className="gap-2">
-          <Text className="text-sm font-medium">Your location</Text>
-          <LocationStatus state={locState} onRetry={requestLocation} />
         </View>
 
         {error ? <Text className="text-sm text-destructive">{error}</Text> : null}

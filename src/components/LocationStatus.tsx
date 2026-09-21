@@ -12,8 +12,11 @@ export function LocationStatus({
 }) {
   if (state.status === 'idle') {
     return (
-      <View className="rounded-xl border border-dashed border-border p-4">
-        <Text variant="muted">Location not captured yet. It is attached when you submit.</Text>
+      <View className="gap-2 rounded-xl border border-dashed border-border p-4">
+        <Text variant="muted">Area name is enough. Attach GPS for extra precision.</Text>
+        <Pressable onPress={onRetry} className="self-start rounded-md border border-border px-4 py-2">
+          <Text className="text-sm font-medium">Use my precise location</Text>
+        </Pressable>
       </View>
     );
   }

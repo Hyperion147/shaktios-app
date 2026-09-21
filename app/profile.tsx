@@ -39,7 +39,7 @@ export default function ProfileScreen() {
           <Text>ShaktiOS Citizen Reporting v1.0.0 — hackathon MVP.</Text>
         </Card>
         <Pressable onPress={handleLogout} className="rounded-xl bg-destructive py-4">
-          <Text className="text-center font-bold text-white">Log out</Text>
+          <Text className="text-center font-bold text-destructive-foreground">Log out</Text>
         </Pressable>
       </View>
     </ScreenContainer>

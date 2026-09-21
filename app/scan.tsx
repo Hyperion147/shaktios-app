@@ -59,18 +59,18 @@ export default function ScanScreen() {
   }
 
   return (
-    <View className="flex-1 bg-black">
+    <View className="flex-1 bg-foreground">
       <CameraView
         style={{ flex: 1 }}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={handleScan}
       />
-      <View className="absolute inset-x-0 top-0 gap-2 bg-black/60 px-5 pb-4 pt-14">
+      <View className="absolute inset-x-0 top-0 gap-2 bg-foreground/60 px-5 pb-4 pt-14">
         <Pressable onPress={() => router.back()}>
-          <Text className="text-sm text-white/80">‹ Back</Text>
+          <Text className="text-sm text-background/80">‹ Back</Text>
         </Pressable>
-        <Text className="text-lg font-bold text-white">Point at the event QR</Text>
+        <Text className="text-lg font-bold text-background">Point at the event QR</Text>
         {error ? (
           <ErrorState title="Invalid code" message={error} onRetry={() => setError(null)} />
         ) : null}
