@@ -1,4 +1,4 @@
-import '@/global.css';
+import '../global.css';
 
 import { NAV_THEME } from '@/lib/theme';
 import { SessionProvider } from '@/src/store/session';
