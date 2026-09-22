@@ -1,20 +1,20 @@
 import { apiRequest } from '@/src/api/client';
 import { CITIZEN_EVENT_TYPE, CITIZEN_SOURCE } from '@/src/constants/config';
 import type { BackendEvent, CitizenReport } from '@/src/types';
-
 export interface SubmitReportInput {
   category: CitizenReport['category'];
   description: string;
-  /** Backend correlation key — exact-match zone string (e.g. "gate_4"). */
+  /** Backend correlation key — exact-match zone string (e.g. "Gate 4"). */
   locationLabel: string;
   latitude?: number | null;
   longitude?: number | null;
   accuracy?: number | null;
   eventId?: string | null;
-  urgency?: CitizenReport['urgency'];
+  urgency?: 'normal' | 'high';
 }
 
-const URGENCY_CONFIDENCE = { low: 0.5, normal: 0.7, high: 0.9 } as const;
+/** Citizen urgency → backend confidence signal. Default 0.7. */
+const URGENCY_CONFIDENCE = { normal: 0.7, high: 0.9 } as const;
 
 /**
  * Citizen observation → normalized backend signal.
@@ -56,4 +56,14 @@ export function toCitizenStatus(backendStatus: string): CitizenReport['status'] 
     default:
       return 'submitted';
   }
+}
+
+/**
+ * Recent citizen reports = GET /events filtered to citizen_report.
+ * No user identity on the backend yet, so this is "recent reports",
+ * not a per-user history.
+ */
+export async function fetchRecentReports(limit = 30): Promise<BackendEvent[]> {
+  const events = await apiRequest<BackendEvent[]>(`/events?limit=${limit}`);
+  return events.filter((e) => e.type === CITIZEN_EVENT_TYPE);
 }

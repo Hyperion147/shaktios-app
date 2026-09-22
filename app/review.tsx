@@ -90,13 +90,17 @@ export default function ReviewScreen() {
 
       {error ? (
         <View className="mt-4">
-          <ErrorState title="Could not submit" message={error} onRetry={submit} />
+          <ErrorState
+            title="Couldn't submit report"
+            message="Check your connection and try again."
+            onRetry={submit}
+          />
         </View>
       ) : null}
 
       <Pressable onPress={submit} disabled={busy} className="mt-6 rounded-xl bg-destructive py-4 disabled:opacity-50">
         <Text className="text-center text-base font-bold text-destructive-foreground">
-          {busy ? 'Submitting…' : 'Submit to ShaktiOS'}
+          {busy ? 'Sending report…' : 'Submit to ShaktiOS'}
         </Text>
       </Pressable>
     </ScreenContainer>

@@ -27,7 +27,7 @@ export default function ScanScreen() {
         return;
       }
       joinEvent(event);
-      router.replace('/home');
+      router.replace('/(tabs)/home');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Invalid QR code.');
       setLocked(false);

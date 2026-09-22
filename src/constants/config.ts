@@ -13,13 +13,18 @@ export const CITIZEN_SOURCE = 'citizen_app';
 export const CITIZEN_EVENT_TYPE = 'citizen_report';
 
 export const INCIDENT_CATEGORIES: IncidentCategory[] = [
-  { id: 'crowd', label: 'Crowd / Stampede Risk', hint: 'Heavy pushing, overcrowding, crush risk' },
+  { id: 'crowd', label: 'Crowd / Overcrowding', hint: 'Heavy pushing, overcrowding, crush risk' },
   { id: 'medical', label: 'Medical Emergency', hint: 'Someone needs medical help' },
-  { id: 'lost_person', label: 'Lost Person', hint: 'Missing child or person' },
   { id: 'fire_smoke', label: 'Fire / Smoke', hint: 'Fire, smoke, or burning smell' },
   { id: 'suspicious', label: 'Suspicious Activity', hint: 'Unattended items or odd behaviour' },
+  { id: 'lost_person', label: 'Lost Person', hint: 'Missing child or person' },
+  { id: 'violence', label: 'Violence / Conflict', hint: 'Fight or threatening behaviour' },
+  { id: 'infrastructure', label: 'Infrastructure Issue', hint: 'Blocked exit, broken barrier, power' },
   { id: 'other', label: 'Other', hint: 'Something else authorities should know' },
 ];
+
+/** Demo default — maps to venue_event_id. Replace when backend event registry lands. */
+export const DEFAULT_ACTIVE_EVENT_ID = 'evt-riverfest-2026';
 
 /** Quick-pick textual zones. GPS stays optional; a plain label is enough. */
 export const LOCATION_PRESETS = ['Gate 4', 'Main Stage', 'North Entrance'];
@@ -27,9 +32,9 @@ export const LOCATION_PRESETS = ['Gate 4', 'Main Stage', 'North Entrance'];
 export const MOCK_VENUE_EVENTS = [
   {
     id: 'evt-riverfest-2026',
-    name: 'Riverfest Main Ground',
-    description: 'Demo event — main stage and Gate 3 / Gate 4 zones.',
-    locationLabel: 'gate_4',
+    name: 'Riverfest 2026',
+    description: 'Main Ground — Main Stage, Food Court, Gates 3 & 4.',
+    locationLabel: 'Gate 4',
     status: 'active' as const,
   },
   {
@@ -40,3 +45,9 @@ export const MOCK_VENUE_EVENTS = [
     status: 'active' as const,
   },
 ];
+
+/** Human-readable event name for a venue_event_id. Falls back to the raw id. */
+export function venueEventName(eventId: string | null | undefined): string {
+  if (!eventId) return 'Riverfest 2026';
+  return MOCK_VENUE_EVENTS.find((e) => e.id === eventId)?.name ?? eventId;
+}

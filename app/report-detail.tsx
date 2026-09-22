@@ -5,45 +5,61 @@ import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { Card, StatusBadge } from '@/src/components/Card';
 import { ErrorState, LoadingState } from '@/src/components/States';
-import { useSession } from '@/src/store/session';
-import { eventsApi } from '@/src/api/events';
+import { fetchRecentReports } from '@/src/api/reports';
 import { normalizeError } from '@/src/api/client';
-import { INCIDENT_CATEGORIES } from '@/src/constants/config';
-import { formatCoords } from '@/src/utils/location';
-import type { BackendIncident } from '@/src/types';
+import { INCIDENT_CATEGORIES, venueEventName } from '@/src/constants/config';
+import { timeAgo } from '@/src/utils/time';
+import type { BackendEvent } from '@/src/types';
 
+function row(label: string, value: string) {
+  return (
+    <Card key={label}>
+      <Text variant="muted" className="text-xs uppercase">{label}</Text>
+      <Text className="mt-0.5 font-semibold">{value}</Text>
+    </Card>
+  );
+}
+
+/** Citizen-facing detail — observation facts only, no risk internals. */
 export default function ReportDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { myReports } = useSession();
-  const report = myReports.find((r) => r.id === id);
-  const [incident, setIncident] = React.useState<BackendIncident | null>(null);
+  const [report, setReport] = React.useState<BackendEvent | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setError(null);
+    try {
+      const list = await fetchRecentReports(50);
+      setReport(list.find((e) => e.id === id) ?? null);
+    } catch (e) {
+      setError(normalizeError(e).message);
+    }
+  }, [id]);
 
   React.useEffect(() => {
-    if (!report?.backendEventId) return;
-    // Best-effort: find a correlated incident sharing the zone label.
-    setLoading(true);
-    eventsApi
-      .getIncidents(50)
-      .then((list) => setIncident(list.find((i) => i.location === report.locationLabel) ?? null))
-      .catch((e) => setError(normalizeError(e).message))
-      .finally(() => setLoading(false));
-  }, [report]);
+    load();
+  }, [load]);
 
-  if (!report) {
+  if (error) {
     return (
       <ScreenContainer>
-        <Text variant="h3">Report not found</Text>
-        <Pressable onPress={() => router.back()} className="mt-4">
-          <Text className="text-muted-foreground">‹ Back</Text>
-        </Pressable>
+        <ErrorState title="Couldn't load report" message={error} onRetry={load} />
+      </ScreenContainer>
+    );
+  }
+  if (report === null) {
+    return (
+      <ScreenContainer>
+        <LoadingState title="Loading report…" />
       </ScreenContainer>
     );
   }
 
-  const label = INCIDENT_CATEGORIES.find((c) => c.id === report.category)?.label ?? report.category;
+  const payload = report.payload as Record<string, unknown>;
+  const label =
+    INCIDENT_CATEGORIES.find((c) => c.id === payload.category)?.label ??
+    String(payload.category ?? 'Report');
 
   return (
     <ScreenContainer className="px-0">
@@ -51,41 +67,16 @@ export default function ReportDetailScreen() {
         <Pressable onPress={() => router.back()}>
           <Text className="text-sm text-muted-foreground">‹ Back</Text>
         </Pressable>
-        <View className="flex-row items-center justify-between">
-          <Text variant="h3">{label}</Text>
-          <StatusBadge status={report.status} />
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="flex-1 text-xl font-extrabold tracking-tight">{label}</Text>
+          <StatusBadge status="received" />
         </View>
-
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Description</Text>
-          <Text>{report.description || 'No description'}</Text>
-        </Card>
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Report ID</Text>
-          <Text className="font-mono text-xs">{report.id}</Text>
-          <Text variant="muted" className="mt-1 text-xs">
-            {new Date(report.createdAt).toLocaleString()} · {report.locationLabel}
-            {report.location ? ` · ${formatCoords(report.location)}` : ''}
-          </Text>
-        </Card>
-
-        <Text className="mt-1 text-base font-bold">Backend status</Text>
-        {loading ? (
-          <LoadingState title="Checking for a correlated incident…" />
-        ) : error ? (
-          <ErrorState title="Could not check status" message={error} />
-        ) : incident ? (
-          <Card>
-            <Text className="font-semibold">
-              {incident.type.replace(/_/g, ' ')} · {incident.location}
-            </Text>
-            <Text variant="muted" className="text-xs">
-              {incident.status} · severity {incident.severity} · risk {incident.risk.toFixed(2)}
-            </Text>
-          </Card>
-        ) : (
-          <Text variant="muted">No correlated incident yet — check back after the pipeline runs.</Text>
-        )}
+        {row('Description', String(payload.description || 'No description'))}
+        {row('Location', report.location)}
+        {row('Reported', `${timeAgo(report.timestamp)} (${new Date(report.timestamp).toLocaleString()})`)}
+        {row('Event', venueEventName(payload.venue_event_id as string | undefined))}
+        {row('Urgency', (payload.urgency as string) === 'high' ? 'Urgent' : 'Normal')}
+        {row('Report ID', report.id)}
       </ScrollView>
     </ScreenContainer>
   );

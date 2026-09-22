@@ -28,6 +28,8 @@ export type IncidentCategoryId =
   | 'lost_person'
   | 'fire_smoke'
   | 'suspicious'
+  | 'violence'
+  | 'infrastructure'
   | 'other';
 
 export interface IncidentCategory {
@@ -60,7 +62,7 @@ export interface CitizenReport {
   description: string;
   location: ReportLocation | null;
   locationLabel: string;
-  urgency: 'low' | 'normal' | 'high';
+  urgency: 'normal' | 'high';
   createdAt: string;
   status: CitizenReportStatus;
   backendEventId?: string;
@@ -127,7 +129,7 @@ export interface ReportSubmission {
   category: IncidentCategoryId;
   description: string;
   locationLabel: string;
-  urgency: CitizenReport['urgency'];
+  urgency: 'normal' | 'high';
   gps: ReportLocation | null;
   photoUri: string | null;
   eventId: string | null;

@@ -37,7 +37,7 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       await login(identifier.trim());
-      router.replace('/home');
+      router.replace('/(tabs)/home');
     } catch {
       setError('Sign-in failed. Please try again.');
     } finally {

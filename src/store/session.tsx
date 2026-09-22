@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { restoreSession, signIn as apiSignIn, signOut as apiSignOut } from '@/src/api/auth';
 import { setAuthToken } from '@/src/api/client';
-import { MOCK_VENUE_EVENTS } from '@/src/constants/config';
+import { MOCK_VENUE_EVENTS, DEFAULT_ACTIVE_EVENT_ID } from '@/src/constants/config';
 import type { CitizenReport, ReportLocation, User, VenueEvent } from '@/src/types';
 
 interface ReportDraft {
@@ -36,7 +36,7 @@ const SessionContext = React.createContext<SessionState | null>(null);
 const DEFAULT_DRAFT: ReportDraft = {
   category: 'crowd',
   description: '',
-  locationLabel: '',
+  locationLabel: 'Gate 4',
   urgency: 'normal',
   photoUri: null,
 };
@@ -45,7 +45,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [initializing, setInitializing] = React.useState(true);
   const [user, setUser] = React.useState<User | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
-  const [activeEvent, setActiveEvent] = React.useState<VenueEvent | null>(null);
+  const [activeEvent, setActiveEvent] = React.useState<VenueEvent | null>(
+    () => MOCK_VENUE_EVENTS.find((e) => e.id === DEFAULT_ACTIVE_EVENT_ID) ?? null,
+  );
   const [myReports, setMyReports] = React.useState<CitizenReport[]>([]);
   const [draft, setDraftState] = React.useState<ReportDraft>(DEFAULT_DRAFT);
   const [pendingLocation, setPendingLocation] = React.useState<ReportLocation | null>(null);

@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
@@ -6,19 +6,19 @@ import { Card } from '@/src/components/Card';
 import { MOCK_VENUE_EVENTS } from '@/src/constants/config';
 import { useSession } from '@/src/store/session';
 
+/** Events tab — pick the attended event (QR/deep-link fills the same slot). */
 export default function JoinEventScreen() {
   const router = useRouter();
   const { joinEvent, activeEvent } = useSession();
 
   return (
-    <ScreenContainer>
-      <Pressable onPress={() => router.back()}>
-        <Text className="text-sm text-muted-foreground">‹ Back</Text>
-      </Pressable>
-      <Text variant="h3" className="mt-2">Join event</Text>
-      <Text variant="muted">Select the event you are attending, or scan its QR.</Text>
+    <ScreenContainer className="px-0">
+      <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-8">
+        <View className="pt-2">
+          <Text className="text-xl font-extrabold tracking-tight">Events</Text>
+          <Text variant="muted">Choose the event you are attending.</Text>
+        </View>
 
-      <View className="mt-4 gap-3">
         {MOCK_VENUE_EVENTS.map((event) => {
           const active = activeEvent?.id === event.id;
           return (
@@ -28,22 +28,24 @@ export default function JoinEventScreen() {
               <Pressable
                 onPress={() => {
                   joinEvent(event);
-                  router.replace('/home');
+                  router.push('/(tabs)/home');
                 }}
                 className={`mt-3 rounded-lg py-3 ${active ? 'bg-secondary' : 'bg-primary'}`}>
                 <Text
-                  className={`text-center font-semibold ${active ? '' : 'text-primary-foreground'}`}>
+                  className={`text-center font-semibold ${active ? 'text-secondary-foreground' : 'text-primary-foreground'}`}>
                   {active ? 'Current event ✓' : 'Join this event'}
                 </Text>
               </Pressable>
             </Card>
           );
         })}
-      </View>
 
-      <Pressable onPress={() => router.push('/scan')} className="mt-4 rounded-lg border border-border py-3.5">
-        <Text className="text-center font-semibold">Scan event QR instead</Text>
-      </Pressable>
+        <Pressable
+          onPress={() => router.push('/scan')}
+          className="rounded-lg border border-border py-3.5">
+          <Text className="text-center font-semibold">Scan event QR instead</Text>
+        </Pressable>
+      </ScrollView>
     </ScreenContainer>
   );
 }

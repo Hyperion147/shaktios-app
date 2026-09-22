@@ -11,9 +11,8 @@ import { captureLocation, type LocationState } from '@/src/utils/location';
 import { PLACEHOLDER_COLOR } from '@/lib/theme';
 
 const URGENCY = [
-  { id: 'low', label: 'Not urgent' },
-  { id: 'normal', label: 'Needs attention' },
-  { id: 'high', label: 'Urgent!' },
+  { id: 'normal', label: 'Normal' },
+  { id: 'high', label: 'Urgent' },
 ] as const;
 
 export default function ReportScreen() {
