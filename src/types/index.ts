@@ -1,7 +1,8 @@
 // Shared ShaktiOS citizen-app types.
 // Backend-authoritative models mirror services/api (FastAPI).
-// VenueEvent/User/Auth are client-side adapters — the backend has no
-// auth or venue-event registry yet (see docs/API.md).
+// Auth identity comes from Supabase Auth (JWT `sub`, verified by FastAPI).
+// VenueEvent is client-side onboarding context — the backend has no
+// venue-event registry (venue_event_id is an opaque string in the payload).
 
 export interface User {
   id: string;
@@ -68,7 +69,7 @@ export interface CitizenReport {
   backendEventId?: string;
 }
 
-/** Backend signal event (POST /events). */
+/** Backend signal event (POST /events). reporter_id is server-stamped from the JWT. */
 export interface BackendEvent {
   id: string;
   type: string;
@@ -77,6 +78,7 @@ export interface BackendEvent {
   location: string;
   confidence: number;
   payload: Record<string, unknown>;
+  reporter_id?: string | null;
 }
 
 export type BackendIncidentStatus = 'DETECTED' | 'ASSESSING' | 'RESPONDING' | 'RESOLVED';

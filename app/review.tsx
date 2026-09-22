@@ -49,7 +49,12 @@ export default function ReviewScreen() {
       setDraft({ description: '', photoUri: null });
       router.replace({ pathname: '/submitted', params: { id: event.id } });
     } catch (e) {
-      setError(normalizeError(e).message);
+      const err = normalizeError(e);
+      if (err.code === 'unauthorized') {
+        router.replace('/login');
+        return;
+      }
+      setError(err.message);
     } finally {
       setBusy(false);
     }

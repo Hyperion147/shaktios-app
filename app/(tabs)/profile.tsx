@@ -6,13 +6,14 @@ import { Card } from '@/src/components/Card';
 import { useSession } from '@/src/store/session';
 import { API_BASE_URL } from '@/src/constants/config';
 
-/** Profile tab. Auth is optional in this MVP — reporting never requires it. */
+/** Profile tab — Supabase session + sign out. */
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, activeEvent } = useSession();
 
   const handleLogout = async () => {
     await logout();
+    router.replace('/login');
   };
 
   return (
@@ -24,15 +25,15 @@ export default function ProfileScreen() {
           <Card>
             <Text variant="muted" className="text-xs uppercase">Signed in as</Text>
             <Text className="text-lg font-bold">{user.name}</Text>
-            <Text variant="muted">{user.phone ?? user.email ?? ''}</Text>
+            <Text variant="muted">{user.email ?? ''}</Text>
           </Card>
         ) : (
           <Card>
-            <Text className="font-semibold">Browsing as guest</Text>
-            <Text variant="muted">Reporting works without an account in this demo.</Text>
+            <Text className="font-semibold">Not signed in</Text>
+            <Text variant="muted">Sign in to submit incident reports.</Text>
             <Pressable onPress={() => router.push('/login')} className="mt-3 rounded-lg bg-primary py-3">
               <Text className="text-center font-semibold text-primary-foreground">
-                Sign in (optional)
+                Sign in
               </Text>
             </Pressable>
           </Card>
@@ -44,7 +45,7 @@ export default function ProfileScreen() {
         </Card>
         <Card>
           <Text variant="muted" className="text-xs uppercase">About</Text>
-          <Text>ShaktiOS Citizen Reporting — hackathon MVP.</Text>
+          <Text>ShaktiOS Citizen Reporting.</Text>
         </Card>
         {user ? (
           <Pressable onPress={handleLogout} className="rounded-xl bg-destructive py-4">

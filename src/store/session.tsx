@@ -1,6 +1,13 @@
 import * as React from 'react';
-import { restoreSession, signIn as apiSignIn, signOut as apiSignOut } from '@/src/api/auth';
+import {
+  restoreSession,
+  signIn as apiSignIn,
+  signOut as apiSignOut,
+  signUp as apiSignUp,
+} from '@/src/api/auth';
 import { setAuthToken } from '@/src/api/client';
+import { getSupabase } from '@/src/api/supabase';
+import { isSupabaseConfigured } from '@/src/constants/config';
 import { MOCK_VENUE_EVENTS, DEFAULT_ACTIVE_EVENT_ID } from '@/src/constants/config';
 import type { CitizenReport, ReportLocation, User, VenueEvent } from '@/src/types';
 
@@ -20,7 +27,8 @@ interface SessionState {
   activeEvent: VenueEvent | null;
   myReports: CitizenReport[];
   draft: ReportDraft;
-  login: (identifier: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   joinEvent: (event: VenueEvent) => void;
   leaveEvent: () => void;
@@ -41,6 +49,15 @@ const DEFAULT_DRAFT: ReportDraft = {
   photoUri: null,
 };
 
+function toUser(id: string, email: string | null): User {
+  return {
+    id,
+    name: email ? email.split('@')[0] : 'Citizen',
+    role: 'citizen',
+    ...(email ? { email } : {}),
+  };
+}
+
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [initializing, setInitializing] = React.useState(true);
   const [user, setUser] = React.useState<User | null>(null);
@@ -53,22 +70,50 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [pendingLocation, setPendingLocation] = React.useState<ReportLocation | null>(null);
 
   React.useEffect(() => {
+    let mounted = true;
     (async () => {
       const session = await restoreSession();
-      if (session) {
+      if (mounted && session) {
         setUser(session.user);
         setToken(session.token);
         setAuthToken(session.token);
       }
-      setInitializing(false);
+      if (mounted) setInitializing(false);
     })();
+    // Keep token fresh and handle expiry/sign-out everywhere.
+    if (!isSupabaseConfigured()) return () => {};
+    const { data } = getSupabase().auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (session?.user && session.access_token) {
+        setUser(toUser(session.user.id, session.user.email ?? null));
+        setToken(session.access_token);
+        setAuthToken(session.access_token);
+      } else {
+        setUser(null);
+        setToken(null);
+        setAuthToken(null);
+      }
+    });
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
-  const login = React.useCallback(async (identifier: string) => {
-    const session = await apiSignIn(identifier);
-    setUser(session.user);
-    setToken(session.token);
-    setAuthToken(session.token);
+  const login = React.useCallback(async (email: string, password: string) => {
+    const u = await apiSignIn(email, password);
+    const session = await restoreSession();
+    setUser(u);
+    setToken(session?.token ?? null);
+    setAuthToken(session?.token ?? null);
+  }, []);
+
+  const signUp = React.useCallback(async (email: string, password: string) => {
+    const u = await apiSignUp(email, password);
+    const session = await restoreSession();
+    setUser(u);
+    setToken(session?.token ?? null);
+    setAuthToken(session?.token ?? null);
   }, []);
 
   const logout = React.useCallback(async () => {
@@ -113,6 +158,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       pendingLocation,
       setPendingLocation,
       login,
+      signUp,
       logout,
       joinEvent,
       leaveEvent,
@@ -120,7 +166,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setDraft,
       addReport,
     }),
-    [initializing, user, token, activeEvent, myReports, draft, pendingLocation, login, logout, joinEvent, leaveEvent, validateEventId, setDraft, setPendingLocation, addReport],
+    [initializing, user, token, activeEvent, myReports, draft, pendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, setPendingLocation, addReport],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -5,7 +5,7 @@ import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { Card, StatusBadge } from '@/src/components/Card';
 import { ErrorState, LoadingState } from '@/src/components/States';
-import { fetchRecentReports } from '@/src/api/reports';
+import { fetchMyReports } from '@/src/api/reports';
 import { normalizeError } from '@/src/api/client';
 import { INCIDENT_CATEGORIES, venueEventName } from '@/src/constants/config';
 import { timeAgo } from '@/src/utils/time';
@@ -30,7 +30,7 @@ export default function ReportDetailScreen() {
   const load = React.useCallback(async () => {
     setError(null);
     try {
-      const list = await fetchRecentReports(50);
+      const list = await fetchMyReports(50);
       setReport(list.find((e) => e.id === id) ?? null);
     } catch (e) {
       setError(normalizeError(e).message);

@@ -20,7 +20,8 @@ const URGENCY_CONFIDENCE = { normal: 0.7, high: 0.9 } as const;
  * Citizen observation → normalized backend signal.
  * POST /events with type "citizen_report"; the server-side
  * correlation/risk pipeline owns everything after ingest.
- * Never computes risk client-side.
+ * Never computes risk client-side. Never sends user identity —
+ * FastAPI stamps reporter_id from the validated JWT.
  */
 export async function submitReport(input: SubmitReportInput): Promise<BackendEvent> {
   return apiRequest<BackendEvent>('/events', {
@@ -58,12 +59,31 @@ export function toCitizenStatus(backendStatus: string): CitizenReport['status'] 
   }
 }
 
+interface MeResponse {
+  id: string;
+  email?: string | null;
+  role?: string | null;
+}
+
 /**
  * Recent citizen reports = GET /events filtered to citizen_report.
- * No user identity on the backend yet, so this is "recent reports",
- * not a per-user history.
+ * Authenticated requests carry the Supabase Bearer token automatically;
+ * anonymous callers still get the public recent list.
  */
 export async function fetchRecentReports(limit = 30): Promise<BackendEvent[]> {
   const events = await apiRequest<BackendEvent[]>(`/events?limit=${limit}`);
   return events.filter((e) => e.type === CITIZEN_EVENT_TYPE);
+}
+
+/**
+ * My reports: verified identity from GET /me (JWT sub), then filter the
+ * citizen_report events stamped with that reporter_id server-side.
+ * The client never sends an arbitrary user id — identity comes from the JWT.
+ */
+export async function fetchMyReports(limit = 50): Promise<BackendEvent[]> {
+  const me = await apiRequest<MeResponse>('/me');
+  const events = await apiRequest<BackendEvent[]>(`/events?limit=${limit}`);
+  return events.filter(
+    (e) => e.type === CITIZEN_EVENT_TYPE && e.reporter_id === me.id,
+  );
 }

@@ -6,6 +6,19 @@ const extra = (Constants.expoConfig?.extra ?? {}) as { apiUrl?: string };
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ?? extra.apiUrl ?? 'http://localhost:8000';
 
+/**
+ * Public Supabase configuration (publishable key only — safe for clients).
+ * Never add the service-role key or backend secrets here.
+ */
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+
+export const SUPABASE_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+
+export function isSupabaseConfigured(): boolean {
+  return SUPABASE_URL.length > 0 && SUPABASE_PUBLISHABLE_KEY.length > 0;
+}
+
 export const REQUEST_TIMEOUT_MS = 15_000;
 
 /** Source tag sent with every citizen signal so the pipeline can attribute it. */

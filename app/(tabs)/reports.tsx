@@ -5,7 +5,7 @@ import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { StatusBadge } from '@/src/components/Card';
 import { EmptyState, ErrorState, LoadingState } from '@/src/components/States';
-import { fetchRecentReports } from '@/src/api/reports';
+import { fetchMyReports } from '@/src/api/reports';
 import { normalizeError } from '@/src/api/client';
 import { INCIDENT_CATEGORIES, venueEventName } from '@/src/constants/config';
 import { timeAgo } from '@/src/utils/time';
@@ -15,7 +15,10 @@ function categoryLabel(id: unknown): string {
   return INCIDENT_CATEGORIES.find((c) => c.id === id)?.label ?? String(id ?? 'Report');
 }
 
-/** Recent citizen reports from GET /events (no per-user identity on backend yet). */
+/**
+ * My Reports — authenticated citizen's own reports. Identity comes from the
+ * Supabase JWT (GET /me); the client never sends an arbitrary user id.
+ */
 export default function ReportsScreen() {
   const router = useRouter();
   const [reports, setReports] = React.useState<BackendEvent[] | null>(null);
@@ -24,11 +27,16 @@ export default function ReportsScreen() {
   const load = React.useCallback(async () => {
     setError(null);
     try {
-      setReports(await fetchRecentReports());
+      setReports(await fetchMyReports());
     } catch (e) {
-      setError(normalizeError(e).message);
+      const err = normalizeError(e);
+      if (err.code === 'unauthorized') {
+        router.replace('/login');
+        return;
+      }
+      setError(err.message);
     }
-  }, []);
+  }, [router]);
 
   React.useEffect(() => {
     load();
@@ -38,8 +46,8 @@ export default function ReportsScreen() {
     <ScreenContainer className="px-0">
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-8">
         <View className="pt-2">
-          <Text className="text-xl font-extrabold tracking-tight">Recent Reports</Text>
-          <Text variant="muted">Latest citizen observations received by ShaktiOS.</Text>
+          <Text className="text-xl font-extrabold tracking-tight">My Reports</Text>
+          <Text variant="muted">Reports you submitted with this account.</Text>
         </View>
 
         {error ? (

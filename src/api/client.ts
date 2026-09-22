@@ -1,8 +1,10 @@
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '@/src/constants/config';
+import { getAccessToken } from '@/src/api/supabase';
 import type { ApiError } from '@/src/types';
 
 let authToken: string | null = null;
 
+/** Manual override (kept for session restore); otherwise read from Supabase. */
 export function setAuthToken(token: string | null) {
   authToken = token;
 }
@@ -39,7 +41,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? REQUEST_TIMEOUT_MS);
 
   try {
-    const token = options.token ?? authToken;
+    // Centralized auth: explicit per-call token → cached token → live Supabase session.
+    const token = options.token ?? authToken ?? (await getAccessToken());
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       signal: controller.signal,

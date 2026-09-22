@@ -5,41 +5,38 @@ import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { AppInput } from '@/src/components/AppInput';
 import { useSession } from '@/src/store/session';
-import { API_BASE_URL } from '@/src/constants/config';
+import { API_BASE_URL, isSupabaseConfigured } from '@/src/constants/config';
 
-const DEMO_OTP = '123456';
-
+/** Citizen sign-in via Supabase Auth (email + password). */
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useSession();
-  const [identifier, setIdentifier] = React.useState('');
-  const [otp, setOtp] = React.useState('');
-  const [step, setStep] = React.useState<'identifier' | 'otp'>('identifier');
+  const { login, signUp } = useSession();
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [mode, setMode] = React.useState<'signin' | 'signup'>('signin');
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
-  const requestOtp = () => {
+  const submit = async () => {
     setError(null);
-    if (identifier.trim().length < 4) {
-      setError('Enter a valid phone number or email.');
+    if (!email.includes('@')) {
+      setError('Enter a valid email address.');
       return;
     }
-    // Backend has no OTP endpoint yet — demo code is 123456.
-    setStep('otp');
-  };
-
-  const confirm = async () => {
-    setError(null);
-    if (otp.trim() !== DEMO_OTP) {
-      setError('Invalid code. Use demo code 123456.');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
       return;
     }
     setBusy(true);
     try {
-      await login(identifier.trim());
+      if (mode === 'signin') {
+        await login(email.trim(), password);
+      } else {
+        await signUp(email.trim(), password);
+      }
       router.replace('/(tabs)/home');
-    } catch {
-      setError('Sign-in failed. Please try again.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Authentication failed. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -53,46 +50,46 @@ export default function LoginScreen() {
       </View>
 
       <View className="mt-8 gap-4">
-        {step === 'identifier' ? (
-          <>
-            <AppInput
-              label="Phone or email"
-              placeholder="+91 98765 43210 or you@mail.com"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={identifier}
-              onChangeText={setIdentifier}
-              error={error}
-            />
-            <Pressable onPress={requestOtp} className="rounded-lg bg-primary py-3.5">
-              <Text className="text-center font-semibold text-primary-foreground">Continue</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <AppInput
-              label={`Code sent to ${identifier}`}
-              placeholder="Enter 6-digit code"
-              keyboardType="number-pad"
-              maxLength={6}
-              value={otp}
-              onChangeText={setOtp}
-              hint="Demo build — use code 123456 (backend OTP pending)."
-              error={error}
-            />
-            <Pressable
-              onPress={confirm}
-              disabled={busy}
-              className="rounded-lg bg-primary py-3.5 disabled:opacity-50">
-              <Text className="text-center font-semibold text-primary-foreground">
-                {busy ? 'Signing in…' : 'Verify & sign in'}
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => setStep('identifier')}>
-              <Text className="text-center text-sm text-muted-foreground">Use a different ID</Text>
-            </Pressable>
-          </>
-        )}
+        {!isSupabaseConfigured() ? (
+          <View className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+            <Text className="font-semibold">Supabase is not configured</Text>
+            <Text variant="muted" className="mt-1 text-sm">
+              Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, then
+              restart the app.
+            </Text>
+          </View>
+        ) : null}
+        <AppInput
+          label="Email"
+          placeholder="you@mail.com"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          error={error}
+        />
+        <AppInput
+          label="Password"
+          placeholder="••••••••"
+          secureTextEntry
+          autoCapitalize="none"
+          value={password}
+          onChangeText={setPassword}
+          hint={mode === 'signup' ? 'Min. 6 characters.' : 'Your Supabase account password.'}
+        />
+        <Pressable
+          onPress={submit}
+          disabled={busy}
+          className="rounded-lg bg-primary py-3.5 disabled:opacity-50">
+          <Text className="text-center font-semibold text-primary-foreground">
+            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+          </Text>
+        </Pressable>
+        <Pressable onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
+          <Text className="text-center text-sm text-muted-foreground">
+            {mode === 'signin' ? 'New here? Create an account' : 'Have an account? Sign in'}
+          </Text>
+        </Pressable>
         <Text variant="muted" className="text-center text-xs">
           API: {API_BASE_URL}
         </Text>
