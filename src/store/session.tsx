@@ -15,7 +15,8 @@ interface ReportDraft {
   category: CitizenReport['category'];
   description: string;
   locationLabel: string;
-  urgency: CitizenReport['urgency'];
+  /** Citizen-facing urgency (Low/Medium/High). Mapped to backend normal/high on submit. */
+  urgency: 'low' | 'medium' | 'high';
   /** Local-only until backend supports media upload. */
   photoUri: string | null;
 }
@@ -44,8 +45,8 @@ const SessionContext = React.createContext<SessionState | null>(null);
 const DEFAULT_DRAFT: ReportDraft = {
   category: 'crowd',
   description: '',
-  locationLabel: 'Gate 4',
-  urgency: 'normal',
+  locationLabel: 'Gate 3',
+  urgency: 'medium',
   photoUri: null,
 };
 

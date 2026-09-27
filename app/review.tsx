@@ -1,16 +1,31 @@
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { TriangleAlert } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
+import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
-import { Card } from '@/src/components/Card';
-import { ErrorState } from '@/src/components/States';
+import { PrimaryButton, ScreenHeader, Stepper } from '@/src/components/design';
 import { useSession } from '@/src/store/session';
 import { submitReport } from '@/src/api/reports';
 import { normalizeError } from '@/src/api/client';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
 import { formatCoords } from '@/src/utils/location';
 
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Card className="gap-1 rounded-2xl p-4">
+      <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Text>
+      {children}
+    </Card>
+  );
+}
+
+/** Screen 9 — Review report before submitting. */
 export default function ReviewScreen() {
   const router = useRouter();
   const { draft, activeEvent, pendingLocation, addReport, setDraft } = useSession();
@@ -19,6 +34,7 @@ export default function ReviewScreen() {
 
   const categoryLabel =
     INCIDENT_CATEGORIES.find((c) => c.id === draft.category)?.label ?? draft.category;
+  const urgencyLabel = draft.urgency.charAt(0).toUpperCase() + draft.urgency.slice(1);
 
   const submit = async () => {
     setBusy(true);
@@ -32,7 +48,7 @@ export default function ReviewScreen() {
         longitude: pendingLocation?.longitude ?? null,
         accuracy: pendingLocation?.accuracy ?? null,
         eventId: activeEvent?.id ?? null,
-        urgency: draft.urgency,
+        urgency: draft.urgency === 'high' ? 'high' : 'normal',
       });
       addReport({
         id: event.id,
@@ -41,7 +57,7 @@ export default function ReviewScreen() {
         description: draft.description,
         location: pendingLocation,
         locationLabel: draft.locationLabel,
-        urgency: draft.urgency,
+        urgency: draft.urgency === 'high' ? 'high' : 'normal',
         createdAt: event.timestamp,
         status: 'submitted',
         backendEventId: event.id,
@@ -61,53 +77,70 @@ export default function ReviewScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Pressable onPress={() => router.back()}>
-        <Text className="text-sm text-muted-foreground">‹ Back</Text>
-      </Pressable>
-      <Text variant="h3" className="mt-2">Review report</Text>
-      <Text variant="muted">This goes to ShaktiOS as a raw observation.</Text>
-
-      <View className="mt-4 gap-3">
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Event</Text>
-          <Text className="font-semibold">{activeEvent?.name ?? 'No event joined'}</Text>
-        </Card>
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Category</Text>
-          <Text className="font-semibold">{categoryLabel}</Text>
-          {draft.description ? <Text className="mt-1">{draft.description}</Text> : null}
-        </Card>
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Location</Text>
-          <Text className="font-semibold">{draft.locationLabel || '—'}</Text>
-          <Text variant="muted">
-            {pendingLocation ? formatCoords(pendingLocation) : 'Area name only — no GPS attached'}
-          </Text>
-        </Card>
-        <Card>
-          <Text variant="muted" className="text-xs uppercase">Photo</Text>
-          <Text className="font-semibold">
-            {draft.photoUri ? '1 photo attached (sent when upload is supported)' : 'No photo'}
-          </Text>
-        </Card>
+    <ScreenContainer className="px-0">
+      <View className="px-5">
+        <ScreenHeader title="Review Report" onBack={() => router.back()} />
+        <Stepper steps={['Category', 'Details', 'Location', 'Review']} current={3} />
       </View>
+      <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
+        <Row label="Event">
+          <Text className="text-[14px] font-bold">{activeEvent?.name ?? 'TechFest 2025'}</Text>
+        </Row>
+        <Row label="Category">
+          <Text className="text-[14px] font-bold">{categoryLabel}</Text>
+        </Row>
+        <Row label="Description">
+          <Text className="text-[13px] leading-5">
+            {draft.description || 'No description provided.'}
+          </Text>
+        </Row>
+        <Row label="Location">
+          <Text className="text-[14px] font-bold">{draft.locationLabel || '—'}</Text>
+          <Text variant="muted" className="text-[12px]">
+            {pendingLocation
+              ? `${formatCoords(pendingLocation)} · ${new Date(pendingLocation.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })}`
+              : 'Area name only — no GPS attached'}
+          </Text>
+        </Row>
+        <Row label="Urgency">
+          <Text className="text-[14px] font-bold">🟡 {urgencyLabel}</Text>
+        </Row>
+        <Row label="Attachments">
+          {draft.photoUri ? (
+            <Image
+              source={{ uri: draft.photoUri }}
+              className="h-28 w-full rounded-xl"
+              resizeMode="cover"
+            />
+          ) : (
+            <Text variant="muted" className="text-[12px]">
+              No media attached
+            </Text>
+          )}
+        </Row>
 
-      {error ? (
-        <View className="mt-4">
-          <ErrorState
-            title="Couldn't submit report"
-            message="Check your connection and try again."
-            onRetry={submit}
+        {error ? (
+          <View className="gap-3">
+            <Alert icon={TriangleAlert} variant="destructive">
+              <AlertTitle>Couldn't submit report</AlertTitle>
+              <AlertDescription>
+                {error} — check your connection and try again.
+              </AlertDescription>
+            </Alert>
+            <Button onPress={submit} disabled={busy} className="h-14 w-full rounded-2xl">
+              <Text className="text-[15px] font-bold">
+                {busy ? 'Sending report…' : 'Try Again'}
+              </Text>
+            </Button>
+          </View>
+        ) : (
+          <PrimaryButton
+            title={busy ? 'Sending report…' : 'Submit Report'}
+            onPress={submit}
+            loading={busy}
           />
-        </View>
-      ) : null}
-
-      <Pressable onPress={submit} disabled={busy} className="mt-6 rounded-xl bg-destructive py-4 disabled:opacity-50">
-        <Text className="text-center text-base font-bold text-destructive-foreground">
-          {busy ? 'Sending report…' : 'Submit to ShaktiOS'}
-        </Text>
-      </Pressable>
+        )}
+      </ScrollView>
     </ScreenContainer>
   );
 }

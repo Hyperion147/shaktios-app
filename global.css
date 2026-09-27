@@ -23,6 +23,7 @@
     --border: oklch(0.87 0.01 258.34);
     --input: oklch(0.87 0.01 258.34);
     --ring: oklch(0.59 0.2 277.12);
+    --radius: 0.625rem;
     --chart-1: oklch(0.59 0.2 277.12);
     --chart-2: oklch(0.51 0.23 276.97);
     --chart-3: oklch(0.46 0.21 277.02);

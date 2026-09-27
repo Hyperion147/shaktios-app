@@ -37,12 +37,28 @@ export const INCIDENT_CATEGORIES: IncidentCategory[] = [
 ];
 
 /** Demo default — maps to venue_event_id. Replace when backend event registry lands. */
-export const DEFAULT_ACTIVE_EVENT_ID = 'evt-riverfest-2026';
+export const DEFAULT_ACTIVE_EVENT_ID = 'evt-techfest-2025';
 
 /** Quick-pick textual zones. GPS stays optional; a plain label is enough. */
-export const LOCATION_PRESETS = ['Gate 4', 'Main Stage', 'North Entrance'];
+export const LOCATION_PRESETS = ['Gate 3', 'Food Court', 'Main Stage'];
+
+export const ACTIVE_EVENT = {
+  venue: 'City Convention Center, Delhi',
+  dates: '12 Apr 2025 - 14 Apr 2025',
+  about:
+    'TechFest 2025 is a technology and innovation festival bringing together industry leaders, creators and enthusiasts from across the globe.',
+  helpline: '+91 98765 43210',
+  police: '112',
+};
 
 export const MOCK_VENUE_EVENTS = [
+  {
+    id: 'evt-techfest-2025',
+    name: 'TechFest 2025',
+    description: 'City Convention Center, Delhi — 12 Apr 2025 - 14 Apr 2025.',
+    locationLabel: 'Gate 3',
+    status: 'active' as const,
+  },
   {
     id: 'evt-riverfest-2026',
     name: 'Riverfest 2026',
@@ -61,6 +77,6 @@ export const MOCK_VENUE_EVENTS = [
 
 /** Human-readable event name for a venue_event_id. Falls back to the raw id. */
 export function venueEventName(eventId: string | null | undefined): string {
-  if (!eventId) return 'Riverfest 2026';
+  if (!eventId) return 'TechFest 2025';
   return MOCK_VENUE_EVENTS.find((e) => e.id === eventId)?.name ?? eventId;
 }

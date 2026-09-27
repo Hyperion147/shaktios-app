@@ -1,119 +1,54 @@
-import * as React from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
-import { IncidentCategorySelector } from '@/src/components/IncidentCategorySelector';
-import { LocationPicker } from '@/src/components/LocationPicker';
-import { PhotoPicker } from '@/src/components/PhotoPicker';
+import { CategoryTile, PrimaryButton, ScreenHeader, Stepper } from '@/src/components/design';
 import { useSession } from '@/src/store/session';
-import { captureLocation, type LocationState } from '@/src/utils/location';
-import { PLACEHOLDER_COLOR } from '@/lib/theme';
+import { INCIDENT_CATEGORIES } from '@/src/constants/config';
 
-const URGENCY = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'high', label: 'Urgent' },
-] as const;
-
-export default function ReportScreen() {
+/** Screen 6 — Report Incident step 1: select category. */
+export default function ReportCategoryScreen() {
   const router = useRouter();
-  const { draft, setDraft, activeEvent, setPendingLocation } = useSession();
-  const [locState, setLocState] = React.useState<LocationState>({ status: 'idle' });
-  const [error, setError] = React.useState<string | null>(null);
+  const { draft, setDraft, activeEvent } = useSession();
 
-  const requestLocation = React.useCallback(async () => {
-    setLocState({ status: 'requesting' });
-    try {
-      const location = await captureLocation();
-      setLocState({ status: 'ready', location });
-      setPendingLocation(location);
-    } catch (e) {
-      setLocState({
-        status: 'unavailable',
-        message: e instanceof Error ? e.message : 'Location unavailable.',
-      });
-      setPendingLocation(null);
-    }
-  }, [setPendingLocation]);
-
-  const next = () => {
-    if (!draft.description.trim() && draft.category === 'other') {
-      setError('Please describe what you observed.');
-      return;
-    }
-    if (!draft.locationLabel.trim()) {
-      setError('Tell us the area (e.g. Gate 4) so the safety team can find it.');
-      return;
-    }
-    setError(null);
-    router.push('/review');
-  };
+  const rows: (typeof INCIDENT_CATEGORIES)[] = [];
+  for (let i = 0; i < INCIDENT_CATEGORIES.length; i += 2) {
+    rows.push(INCIDENT_CATEGORIES.slice(i, i + 2));
+  }
 
   return (
     <ScreenContainer className="px-0">
-      <ScrollView className="flex-1 px-5" contentContainerClassName="gap-5 pb-10">
-        <View>
-          <Pressable onPress={() => router.back()}>
-            <Text className="text-sm text-muted-foreground">‹ Back</Text>
-          </Pressable>
-          <Text variant="h3" className="mt-1">What do you see?</Text>
-          <Text variant="muted">
-            {activeEvent ? `Reporting at ${activeEvent.name}` : 'No event joined yet'}.
-            Just the facts — ShaktiOS assesses everything else.
-          </Text>
-        </View>
-
-        <View className="gap-2">
-          <Text className="text-sm font-medium">Category</Text>
-          <IncidentCategorySelector value={draft.category} onChange={(c) => setDraft({ category: c })} />
-        </View>
-
-        <View className="gap-1.5">
-          <Text className="text-sm font-medium">Describe what happened</Text>
-          <TextInput
-            multiline
-            numberOfLines={3}
-            placeholder="e.g. Heavy pushing near Gate 4 and someone fell"
-            placeholderTextColor={PLACEHOLDER_COLOR}
-            value={draft.description}
-            onChangeText={(t) => setDraft({ description: t })}
-            className="min-h-[90px] rounded-lg border border-border bg-background px-4 py-3 text-base text-foreground"
-            textAlignVertical="top"
-          />
-        </View>
-
-        <LocationPicker
-          label={draft.locationLabel}
-          onLabelChange={(t) => setDraft({ locationLabel: t })}
-          locationState={locState}
-          onRetryLocation={requestLocation}
-        />
-
-        <PhotoPicker photoUri={draft.photoUri} onChange={(uri) => setDraft({ photoUri: uri })} />
-
-        <View className="gap-2">
-          <Text className="text-sm font-medium">How urgent does this look?</Text>
-          <View className="flex-row gap-2">
-            {URGENCY.map((u) => (
-              <Pressable
-                key={u.id}
-                onPress={() => setDraft({ urgency: u.id })}
-                className={`flex-1 rounded-lg border py-2.5 ${
-                  draft.urgency === u.id ? 'border-primary bg-primary/5' : 'border-border'
-                }`}>
-                <Text className="text-center text-sm font-medium">{u.label}</Text>
-              </Pressable>
-            ))}
+      <View className="px-5">
+        <ScreenHeader title="Report Incident" onBack={() => router.back()} />
+        <Stepper steps={['Category', 'Details', 'Location', 'Review']} current={0} />
+      </View>
+      <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
+        <Text className="text-[15px] font-bold">Select Incident Category</Text>
+        {activeEvent ? null : (
+          <View className="rounded-2xl bg-[#FFF4D6] p-3">
+            <Text className="text-[12px] font-semibold">
+              No event joined — the report will be filed without an event. Join one from Scan for
+              faster routing.
+            </Text>
           </View>
+        )}
+        {rows.map((row, ri) => (
+          <View key={ri} className="flex-row gap-3">
+            {row.map((cat) => (
+              <CategoryTile
+                key={cat.id}
+                id={cat.id}
+                label={cat.label}
+                selected={draft.category === cat.id}
+                onPress={() => setDraft({ category: cat.id })}
+              />
+            ))}
+            {row.length === 1 ? <View className="flex-1" /> : null}
+          </View>
+        ))}
+        <View className="mt-2">
+          <PrimaryButton title="Next" onPress={() => router.push('/report-details')} />
         </View>
-
-        {error ? <Text className="text-sm text-destructive">{error}</Text> : null}
-
-        <Pressable onPress={next} className="rounded-xl bg-primary py-4">
-          <Text className="text-center text-base font-bold text-primary-foreground">
-            Review report
-          </Text>
-        </Pressable>
       </ScrollView>
     </ScreenContainer>
   );

@@ -1,6 +1,9 @@
 import * as React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { cn } from '@/lib/utils';
+import { View } from 'react-native';
+import { TriangleAlert } from 'lucide-react-native';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text as UIText } from '@/components/ui/text';
 
 interface Props {
@@ -9,11 +12,13 @@ interface Props {
   icon?: React.ReactNode;
 }
 
-export function LoadingState({ title, subtitle, icon }: Props) {
+export function LoadingState({ title, subtitle }: Props) {
   return (
     <View className="flex-1 items-center justify-center gap-3 px-8">
-      {icon ?? <ActivityIndicator size="large" />}
-      <UIText className="text-center font-semibold">{title}</UIText>
+      <Skeleton className="h-14 w-14 rounded-full" />
+      <Skeleton className="h-4 w-44 rounded-full" />
+      <Skeleton className="h-3 w-32 rounded-full" />
+      <UIText className="mt-1 text-center font-semibold">{title}</UIText>
       {subtitle ? <UIText variant="muted" className="text-center">{subtitle}</UIText> : null}
     </View>
   );
@@ -40,15 +45,15 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <View className="items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-8">
-      <UIText className="text-center font-semibold">{title}</UIText>
-      <Text className="text-center text-sm text-muted-foreground">{message}</Text>
+    <View className="gap-3">
+      <Alert icon={TriangleAlert} variant="destructive">
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
       {onRetry ? (
-        <Pressable
-          onPress={onRetry}
-          className={cn('mt-2 rounded-md border border-border bg-background px-4 py-2')}>
-          <Text className="text-sm font-medium">Try again</Text>
-        </Pressable>
+        <Button onPress={onRetry} variant="outline" className="w-full">
+          <UIText className="text-sm font-medium">Try again</UIText>
+        </Button>
       ) : null}
     </View>
   );
