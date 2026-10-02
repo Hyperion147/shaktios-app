@@ -31,12 +31,19 @@ export default function ReviewScreen() {
   const { draft, activeEvent, pendingLocation, addReport, setDraft } = useSession();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Synchronous in-flight guard: `busy` alone can't stop rapid double-taps
+  // because state updates flush asynchronously. The ref flips synchronously,
+  // so a second tap while the POST is in flight is a no-op. Reset in
+  // `finally` so genuine failures remain retryable.
+  const submittingRef = React.useRef(false);
 
   const categoryLabel =
     INCIDENT_CATEGORIES.find((c) => c.id === draft.category)?.label ?? draft.category;
   const urgencyLabel = draft.urgency.charAt(0).toUpperCase() + draft.urgency.slice(1);
 
   const submit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -72,6 +79,7 @@ export default function ReviewScreen() {
       }
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   };

@@ -39,8 +39,12 @@ export const INCIDENT_CATEGORIES: IncidentCategory[] = [
 /** Demo default — maps to venue_event_id. Replace when backend event registry lands. */
 export const DEFAULT_ACTIVE_EVENT_ID = 'evt-techfest-2025';
 
-/** Quick-pick textual zones. GPS stays optional; a plain label is enough. */
-export const LOCATION_PRESETS = ['Gate 3', 'Food Court', 'Main Stage'];
+/**
+ * Quick-pick textual zones. GPS stays optional; a plain label is enough.
+ * "Gate 4" is the hackathon golden-path demo zone — keep its exact casing:
+ * the backend correlates incidents by exact location string.
+ */
+export const LOCATION_PRESETS = ['Gate 3', 'Gate 4', 'Food Court', 'Main Stage'];
 
 export const ACTIVE_EVENT = {
   venue: 'City Convention Center, Delhi',

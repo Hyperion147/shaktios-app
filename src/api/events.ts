@@ -2,10 +2,13 @@ import { apiRequest } from '@/src/api/client';
 import type { BackendEvent } from '@/src/types';
 
 /**
- * Citizen-safe event reads. Incident, timeline, status, action, and
- * WebSocket feeds are operator/dashboard concerns and intentionally
- * not exposed here — this app ends at reporting.
+ * Single-user reporting reads only.
+ * Uses shakti-os FastAPI (see ../shakti-os docs/API.md):
+ *   GET /health, GET /events?limit=, POST /events (citizen_report), GET /me.
+ * No incident / timeline / status / action / WebSocket — those are operator
+ * dashboard concerns and stay out of this citizen reporting app.
  */
 export const eventsApi = {
   list: (limit = 50) => apiRequest<BackendEvent[]>(`/events?limit=${limit}`),
+  health: () => apiRequest<{ status: string; service: string }>('/health'),
 };

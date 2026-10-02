@@ -135,7 +135,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const joinEvent = React.useCallback((event: VenueEvent) => {
     setActiveEvent(event);
-    setDraftState((d) => ({ ...d, locationLabel: d.locationLabel || event.locationLabel || '' }));
+    // Scope the draft to the joined event's zone (e.g. joining Riverfest
+    // sets "Gate 4"). The backend correlates by exact location string, so the
+    // draft must follow the event — otherwise reports keep a stale default.
+    setDraftState((d) => ({ ...d, locationLabel: event.locationLabel || d.locationLabel || '' }));
   }, []);
 
   const leaveEvent = React.useCallback(() => setActiveEvent(null), []);

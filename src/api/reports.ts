@@ -44,19 +44,11 @@ export async function submitReport(input: SubmitReportInput): Promise<BackendEve
   });
 }
 
-export function toCitizenStatus(backendStatus: string): CitizenReport['status'] {
-  switch (backendStatus) {
-    case 'DETECTED':
-      return 'received';
-    case 'ASSESSING':
-      return 'under_review';
-    case 'RESPONDING':
-      return 'action_initiated';
-    case 'RESOLVED':
-      return 'resolved';
-    default:
-      return 'submitted';
-  }
+export function toCitizenStatus(_backendStatus: string): CitizenReport['status'] {
+  // Single-user reporting app: backend has no citizen-facing status endpoint
+  // yet (see shakti-os docs/PRESENTATION_CONTEXT.md truth table). Screens use
+  // a local demo badge; this helper is kept for when that endpoint lands.
+  return 'submitted';
 }
 
 interface MeResponse {

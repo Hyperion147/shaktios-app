@@ -13,12 +13,16 @@ import {
 import { Text } from '@/components/ui/text';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { StatusPill } from '@/src/components/design';
 import { THEME } from '@/lib/theme';
 import { useSession } from '@/src/store/session';
 import { fetchMyReports } from '@/src/api/reports';
-import { ACTIVE_EVENT, INCIDENT_CATEGORIES } from '@/src/constants/config';
+import { normalizeError } from '@/src/api/client';
+import { WifiOff } from 'lucide-react-native';
+import { ACTIVE_EVENT, INCIDENT_CATEGORIES, venueEventName } from '@/src/constants/config';
 import { timeAgo } from '@/src/utils/time';
 import type { BackendEvent } from '@/src/types';
 
@@ -39,20 +43,36 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, activeEvent } = useSession();
   const [recent, setRecent] = React.useState<BackendEvent[] | null>(null);
+  // Distinct from `recent === []`: a failed load must not look like "no reports".
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const mountedRef = React.useRef(true);
 
   React.useEffect(() => {
-    let mounted = true;
-    fetchMyReports(5)
-      .then((list) => {
-        if (mounted) setRecent(list);
-      })
-      .catch(() => {
-        if (mounted) setRecent([]);
-      });
+    mountedRef.current = true;
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
   }, []);
+
+  const loadRecent = React.useCallback(async () => {
+    setLoadError(null);
+    try {
+      const list = await fetchMyReports(5);
+      if (mountedRef.current) setRecent(list);
+    } catch (e) {
+      if (!mountedRef.current) return;
+      const err = normalizeError(e);
+      if (err.code === 'unauthorized') {
+        router.replace('/login');
+        return;
+      }
+      setLoadError(err.message);
+    }
+  }, [router]);
+
+  React.useEffect(() => {
+    loadRecent();
+  }, [loadRecent]);
 
   const name = displayName(user?.email, user?.name);
   const eventName = activeEvent?.name ?? 'TechFest 2025';
@@ -167,7 +187,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {recent === null ? (
+        {recent === null && !loadError ? (
           <View className="gap-2">
             {[0, 1].map((i) => (
               <View
@@ -182,22 +202,32 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
-        ) : recent.length === 0 ? (
-          <Pressable
-            onPress={() => router.push('/report')}
-            className="flex-row items-center gap-3 rounded-3xl border border-border bg-card p-4 active:opacity-80">
-            <View className="h-11 w-11 items-center justify-center rounded-full bg-[#FFE9E9]">
-              <Siren size={20} color="#E5484D" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-[13px] font-bold">Medical Emergency</Text>
-              <Text className="text-[11px] text-muted-foreground">TechFest 2025 · 2h ago</Text>
-            </View>
-            <StatusPill status="under_review" label="Under review" />
-          </Pressable>
+        ) : loadError ? (
+          <View className="gap-2 rounded-3xl border border-border bg-card p-4">
+            <Alert icon={WifiOff} variant="destructive">
+              <AlertTitle>Couldn't load reports</AlertTitle>
+              <AlertDescription>{loadError} Check your connection and try again.</AlertDescription>
+            </Alert>
+            <Button onPress={loadRecent} className="h-12 w-full rounded-xl">
+              <Text className="text-[14px] font-bold">Retry</Text>
+            </Button>
+          </View>
+        ) : (recent ?? []).length === 0 ? (
+          <View className="items-center gap-2 rounded-3xl border border-border bg-card px-6 py-10">
+            <Text className="text-center text-[15px] font-bold">No reports yet</Text>
+            <Text variant="muted" className="text-center text-[12px]">
+              Reports you submit will appear here.
+            </Text>
+            <Pressable
+              onPress={() => router.push('/report')}
+              className="mt-2 rounded-2xl bg-primary px-6 py-3">
+              <Text className="font-bold text-primary-foreground">Report Incident</Text>
+            </Pressable>
+          </View>
         ) : (
-          recent.slice(0, 3).map((r) => {
+          (recent ?? []).slice(0, 3).map((r) => {
             const payload = r.payload as Record<string, unknown>;
+            const venueName = venueEventName(payload.venue_event_id as string | undefined);
             return (
               <Pressable
                 key={r.id}
@@ -211,7 +241,7 @@ export default function HomeScreen() {
                     {categoryLabel(payload.category)}
                   </Text>
                   <Text className="text-[11px] text-muted-foreground">
-                    TechFest 2025 · {timeAgo(r.timestamp)}
+                    {venueName} · {timeAgo(r.timestamp)}
                   </Text>
                 </View>
                 <StatusPill status="under_review" label="Under review" />

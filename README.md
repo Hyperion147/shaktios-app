@@ -30,6 +30,22 @@ This will start the Expo Dev Server. Open the app in:
 
 You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
 
+## Configuration (ShaktiOS citizen app)
+
+Copy the example env file and fill in your values (`.env` is gitignored, never commit it):
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose |
+| --- | --- |
+| `EXPO_PUBLIC_API_URL` | FastAPI backend base URL (default `http://localhost:8000`). For a physical phone on the same Wi-Fi, use `http://<LAN_IP>:8000` with the backend listening on `0.0.0.0`. Restart `dev` after changing it. |
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL (Auth only). |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (safe for clients). Never use a service-role key here. |
+
+The app submits citizen reports to `POST {API_URL}/events` with the Supabase JWT as `Authorization: Bearer`. The backend derives identity from the JWT; the client never sends user IDs.
+
 ## Adding components
 
 You can add more reusable components using the CLI:
