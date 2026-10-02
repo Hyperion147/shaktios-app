@@ -1,5 +1,36 @@
 const { hairlineWidth } = require('nativewind/theme');
 
+/*
+ * NOTE: Colors MUST be static sRGB hex values, NOT 'var(--x)'.
+ * React Native has no CSS variables and cannot parse oklch(), so
+ * react-native-css-interop (NativeWind) fails to resolve var() colors and
+ * every themed class (bg-background, text-primary, border-border, ...)
+ * renders nothing on iOS/Android. Static hex also lets Tailwind compile
+ * opacity modifiers (bg-primary/90, bg-secondary/70, ...) at build time.
+ * Keep in sync with global.css :root vars and lib/theme.ts.
+ */
+const palette = {
+  background: '#F6F7F9',
+  foreground: '#1D293D',
+  card: '#FFFFFF',
+  cardForeground: '#1D293D',
+  popover: '#FFFFFF',
+  popoverForeground: '#1D293D',
+  primary: '#6468F0',
+  primaryForeground: '#FFFFFF',
+  secondary: '#E4E8EF',
+  secondaryForeground: '#364050',
+  muted: '#F5F5F5',
+  mutedForeground: '#6C727E',
+  accent: '#E1E7FD',
+  accentForeground: '#364050',
+  destructive: '#F14444',
+  destructiveForeground: '#FFFFFF',
+  border: '#DBE0E9',
+  input: '#DBE0E9',
+  ring: '#6468F0',
+};
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -8,44 +39,45 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: 'var(--border)',
-        input: 'var(--input)',
-        ring: 'var(--ring)',
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        border: palette.border,
+        input: palette.input,
+        ring: palette.ring,
+        background: palette.background,
+        foreground: palette.foreground,
         primary: {
-          DEFAULT: 'var(--primary)',
-          foreground: 'var(--primary-foreground)',
+          DEFAULT: palette.primary,
+          foreground: palette.primaryForeground,
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
+          DEFAULT: palette.secondary,
+          foreground: palette.secondaryForeground,
         },
         destructive: {
-          DEFAULT: 'var(--destructive)',
-          foreground: 'var(--destructive-foreground)',
+          DEFAULT: palette.destructive,
+          foreground: palette.destructiveForeground,
         },
         muted: {
-          DEFAULT: 'var(--muted)',
-          foreground: 'var(--muted-foreground)',
+          DEFAULT: palette.muted,
+          foreground: palette.mutedForeground,
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
+          DEFAULT: palette.accent,
+          foreground: palette.accentForeground,
         },
         popover: {
-          DEFAULT: 'var(--popover)',
-          foreground: 'var(--popover-foreground)',
+          DEFAULT: palette.popover,
+          foreground: palette.popoverForeground,
         },
         card: {
-          DEFAULT: 'var(--card)',
-          foreground: 'var(--card-foreground)',
+          DEFAULT: palette.card,
+          foreground: palette.cardForeground,
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        // --radius (0.625rem @ 16px base) inlined: var() does not resolve on native.
+        lg: '10px',
+        md: '8px',
+        sm: '6px',
       },
       borderWidth: {
         hairline: hairlineWidth(),
