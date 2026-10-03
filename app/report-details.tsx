@@ -1,24 +1,18 @@
 import * as React from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Camera, ChevronDown, ImagePlus, Sparkles } from 'lucide-react-native';
+import { Sparkles } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { CategoryIcon, PrimaryButton, ScreenHeader, Stepper } from '@/src/components/design';
-import { useSession, type DraftPhoto } from '@/src/store/session';
-import { newPhotoId } from '@/src/store/session';
+import { EvidencePhotos } from '@/src/components/EvidencePhotos';
+import { useSession } from '@/src/store/session';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
 import { THEME } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-import {
-  MAX_EVIDENCE_PHOTOS,
-  captureEvidencePhoto,
-  discardEvidencePhoto,
-  uploadEvidencePhoto,
-} from '@/src/api/evidence';
 import { assessPriority, type PriorityAssessment } from '@/src/api/priority';
 import { isLocationFresh } from '@/src/utils/location';
 
@@ -34,23 +28,20 @@ type AssistState =
   | { status: 'loading' }
   | { status: 'ready'; assessment: PriorityAssessment; applied: boolean };
 
-/** Details, photo evidence and AI urgency in one step; GPS is auto-attached. */
+/** Description, zone and urgency; category was chosen on the previous step. */
 export default function ReportDetailsScreen() {
   const router = useRouter();
   const {
-    user, draft, setDraft, activeEvent, deviceLocation, pendingLocation,
-    addDraftPhotos, updateDraftPhoto, removeDraftPhoto, setPendingLocation,
-    refreshDeviceLocation, getDraftRevision,
+    draft, setDraft, activeEvent, deviceLocation, pendingLocation,
+    setPendingLocation, refreshDeviceLocation, getDraftRevision,
   } = useSession();
   const [error, setError] = React.useState<string | null>(null);
-  const [photoError, setPhotoError] = React.useState<string | null>(null);
-  const [photoBusy, setPhotoBusy] = React.useState(false);
   const [assist, setAssist] = React.useState<AssistState>({ status: 'idle' });
   const category = INCIDENT_CATEGORIES.find((item) => item.id === draft.category);
-  const uploadedCount = draft.photos.filter((photo) => photo.remoteUrl).length;
   const draftRef = React.useRef(draft);
   draftRef.current = draft;
   const assistRequest = React.useRef(0);
+  const uploadedCount = draft.photos.filter((photo) => photo.remoteUrl).length;
 
   // Keep the auto-attach fix warm while the citizen types; stale fixes never attach.
   useFocusEffect(React.useCallback(() => {
@@ -110,47 +101,6 @@ export default function ReportDetailsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.description, draft.category, draft.photos.length, uploadedCount, draft.voice]);
 
-  const uploadPhoto = React.useCallback(async (photo: DraftPhoto) => {
-    if (!user) {
-      updateDraftPhoto(photo.id, { uploading: false, error: 'Sign in to upload photos.' });
-      return;
-    }
-    updateDraftPhoto(photo.id, { uploading: true, error: null });
-    try {
-      const remoteUrl = await uploadEvidencePhoto(photo.localUri, user.id);
-      updateDraftPhoto(photo.id, { uploading: false, remoteUrl });
-    } catch (failure) {
-      updateDraftPhoto(photo.id, {
-        uploading: false,
-        error: failure instanceof Error ? failure.message : 'Photo upload failed.',
-      });
-    }
-  }, [user, updateDraftPhoto]);
-
-  const pickPhoto = async (source: 'camera' | 'library') => {
-    if (photoBusy) return;
-    const remaining = MAX_EVIDENCE_PHOTOS - draftRef.current.photos.length;
-    if (remaining <= 0) return;
-    setPhotoBusy(true);
-    setPhotoError(null);
-    try {
-      const localUri = await captureEvidencePhoto(source, remaining);
-      if (!localUri) return;
-      const photo: DraftPhoto = { id: newPhotoId(), localUri, remoteUrl: null, uploading: true, error: null };
-      addDraftPhotos([photo]);
-      void uploadPhoto(photo);
-    } catch (failure) {
-      setPhotoError(failure instanceof Error ? failure.message : 'Could not capture a photo.');
-    } finally {
-      setPhotoBusy(false);
-    }
-  };
-
-  const dropPhoto = (photo: DraftPhoto) => {
-    discardEvidencePhoto(photo.localUri);
-    removeDraftPhoto(photo.id);
-  };
-
   const next = () => {
     if (!activeEvent || activeEvent.status === 'ended') {
       setError('Join an active or upcoming event before continuing.');
@@ -176,17 +126,17 @@ export default function ReportDetailsScreen() {
     <ScreenContainer className="px-0">
       <View className="px-5">
         <ScreenHeader title="Report Incident" onBack={() => router.back()} />
-        <Stepper steps={['Category', 'Details', 'Review']} current={1} />
+        <Stepper steps={['Category', 'Photo', 'Details', 'Review']} current={2} />
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-6">
         <View className="gap-1.5">
           <Label>Category</Label>
-          <Pressable
-            onPress={() => router.back()}
-            className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card px-4 py-3">
+          <View className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card px-4 py-3">
             {category ? <CategoryIcon id={category.id} size={32} /> : null}
             <Text className="flex-1 text-[14px] font-semibold">{category?.label ?? 'Select'}</Text>
-            <ChevronDown size={18} color={THEME.light.mutedForeground} />
+          </View>
+          <Pressable onPress={() => router.push('/report')}>
+            <Text className="text-[12px] font-bold text-primary">Change category</Text>
           </Pressable>
         </View>
 
@@ -205,66 +155,7 @@ export default function ReportDetailsScreen() {
           </Text>
         </View>
 
-        <View className="gap-1.5">
-          <Label>Photo evidence (optional, up to {MAX_EVIDENCE_PHOTOS})</Label>
-          <Text variant="muted" className="text-[12px]">
-            Compressed on this device before upload. Photos help operators assess priority.
-          </Text>
-          {draft.photos.length ? (
-            <View className="flex-row flex-wrap gap-2">
-              {draft.photos.map((photo) => (
-                <View key={photo.id} className="relative h-24 w-24 overflow-hidden rounded-xl border border-border bg-card">
-                  <Image source={{ uri: photo.localUri }} className="h-full w-full" />
-                  {photo.uploading ? (
-                    <View className="absolute inset-0 items-center justify-center bg-foreground/40">
-                      <ActivityIndicator color="#fff" />
-                    </View>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {draft.photos.some((photo) => photo.error && !photo.remoteUrl) ? (
-            <View className="gap-1 rounded-2xl bg-[#FFF4D6] p-3">
-              {draft.photos.filter((photo) => photo.error && !photo.remoteUrl).map((photo) => (
-                <View key={photo.id} className="flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 text-[12px]">{photo.error}</Text>
-                  <Pressable onPress={() => { void uploadPhoto(photo); }} className="px-2 py-1.5">
-                    <Text className="text-[12px] font-bold text-primary">Retry</Text>
-                  </Pressable>
-                  <Pressable onPress={() => dropPhoto(photo)} className="px-2 py-1.5">
-                    <Text className="text-[12px] font-bold text-destructive">Remove</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {draft.photos.length < MAX_EVIDENCE_PHOTOS ? (
-            <View className="flex-row gap-2">
-              <Pressable
-                accessibilityRole="button" accessibilityLabel="Take a photo"
-                disabled={photoBusy} onPress={() => { void pickPhoto('camera'); }}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card px-4 py-3.5">
-                <Camera size={18} color={THEME.light.primary} />
-                <Text className="text-[13px] font-bold text-primary">Take photo</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button" accessibilityLabel="Choose a photo"
-                disabled={photoBusy} onPress={() => { void pickPhoto('library'); }}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card px-4 py-3.5">
-                <ImagePlus size={18} color={THEME.light.primary} />
-                <Text className="text-[13px] font-bold text-primary">Choose photo</Text>
-              </Pressable>
-            </View>
-          ) : null}
-          {photoBusy ? (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator color={THEME.light.primary} />
-              <Text className="text-[12px] text-muted-foreground">Compressing and uploading…</Text>
-            </View>
-          ) : null}
-          {photoError ? <Text className="text-[13px] text-destructive">{photoError}</Text> : null}
-        </View>
+        <EvidencePhotos />
 
         <View className="gap-1.5">
           <Label>Venue zone</Label>

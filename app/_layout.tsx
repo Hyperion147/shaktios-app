@@ -30,6 +30,7 @@ function SessionStack() {
         <Stack.Screen name="event-info" />
         <Stack.Screen name="event-joined" />
         <Stack.Screen name="report" />
+        <Stack.Screen name="camera" />
         <Stack.Screen name="voice-report" />
         <Stack.Screen name="report-details" />
         <Stack.Screen name="review" />

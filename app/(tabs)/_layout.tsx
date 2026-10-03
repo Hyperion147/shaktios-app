@@ -1,6 +1,6 @@
 import { Pressable, View, type ColorValue, type GestureResponderEvent } from 'react-native';
 import { Tabs } from 'expo-router';
-import { CircleUserRound, FileText, House, ScanLine } from 'lucide-react-native';
+import { Camera, CircleUserRound, FileText, House, ScanLine } from 'lucide-react-native';
 import { THEME } from '@/lib/theme';
 import { Text } from '@/components/ui/text';
 
@@ -67,6 +67,14 @@ export default function TabsLayout() {
           tabBarIcon: () => null,
           tabBarLabel: () => null,
           tabBarButton: (props) => <CenterScanButton onPress={props.onPress} />,
+        }}
+      />
+      <Tabs.Screen
+        name="click"
+        options={{
+          title: 'Click',
+          tabBarIcon: ({ color, size }) => <Camera color={color} size={size} />,
+          tabBarLabel: ({ color }) => <TabLabel title="Click" color={color} />,
         }}
       />
       <Tabs.Screen

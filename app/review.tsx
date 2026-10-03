@@ -135,7 +135,7 @@ export default function ReviewScreen() {
     <ScreenContainer className="px-0">
       <View className="px-5">
         <ScreenHeader title="Review Report" onBack={() => router.back()} />
-        <Stepper steps={['Category', 'Details', 'Review']} current={2} />
+        <Stepper steps={['Category', 'Photo', 'Details', 'Review']} current={3} />
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
         <Row label="Event">
