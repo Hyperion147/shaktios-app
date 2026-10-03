@@ -125,7 +125,7 @@ export default function ReportDetailsScreen() {
   return (
     <ScreenContainer className="px-0">
       <View className="px-5">
-        <ScreenHeader title="Report Incident" onBack={() => router.back()} />
+        <ScreenHeader title="Report Incident" onBack={() => router.replace('/(tabs)/home')} />
         <Stepper steps={['Category', 'Photo', 'Details', 'Review']} current={2} />
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-6">
