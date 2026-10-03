@@ -3,6 +3,12 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
+test('expo-audio has its required native asset peer installed as a direct dependency', () => {
+  const manifest = require('../package.json');
+  assert.ok(manifest.dependencies['expo-asset'], 'expo-asset must be direct: a transitive copy is insufficient for native builds');
+  assert.ok(require.resolve('expo-asset', { paths: [path.resolve(__dirname, '..')] }));
+});
+
 test('native config retains the microphone prompt without background recording/playback permissions', () => {
   const root = path.resolve(__dirname, '..');
   // Parse locally, suppress raw config/env output, and never call an account/build service.

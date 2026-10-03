@@ -10,8 +10,9 @@ The API and dashboard also pass their respective tests/build checks. The backend
 
 | Check | Result |
 | --- | --- |
-| Mobile TypeScript + Node tests | Passed; 12 tests |
+| Mobile TypeScript + Node tests | Passed; 13 tests |
 | Expo SDK dependency check + `pnpm peers check` | Passed |
+| `pnpm dlx expo-doctor` | 21/22 checks pass; native dependency check is fixed, but the SDK 56 Hermes memory-regression check still fails |
 | Android + production web export | Passed; exports are not signed native artifacts |
 | Voice web browser flow | 6 scenarios passed against the production export using Chromium's fake microphone and intercepted Auth/API responses |
 | FastAPI | 167 tests passed, including 107 mocked voice tests; two existing deprecation warnings |
@@ -37,11 +38,19 @@ After the Metro peer repair, a stale web export produced a recoverable React Sus
 
 Manual reporting remains a first-class alternative. Voice cannot invent GPS or caller identity, choose a different venue, submit a report by itself, or dispatch a response. All eight category meanings and existing Lucide functional icons are retained. Low/medium/high urgency is now preserved in the report payload instead of collapsing low/medium into `normal`.
 
+## Dependency/runtime audit
+
+`expo-doctor` identified a missing **direct** `expo-asset` dependency required by `expo-audio`. The transitive copy was enough for JavaScript bundling but not the supported native dependency setup. `expo-asset ~56.0.25` and its config plugin are now installed explicitly; a regression test protects that requirement. All 32 packages imported by app/components/source modules were declared and resolvable during the audit.
+
+The emulator also showed an older Metro compilation error for `@rn-primitives/slot`. That package was already declared and installed; an Android bundle request succeeded before the clean Metro restart. After restarting Metro with `--clear` and reopening Expo Go without clearing app storage, the emulator reached the app home screen with no compilation/missing-module overlay. This verifies basic native startup, not the full native voice/reporting flow. After dependency-graph changes, use `pnpm dev` (it starts Expo with `-c`) rather than repeatedly installing packages named in a stale error overlay.
+
+**Remaining framework advisory:** Expo Doctor detects Hermes V1 `250829098.0.10` from the current Expo 56 / React Native 0.85.3 stack. Expo documents a memory regression that can affect applications importing Reanimated/Worklets. The supported fix requires an intentional upgrade to Expo 57 (`expo >=57.0.9`, React Native >=0.86.2), with native dependencies aligned and binaries rebuilt. SDK versions were deliberately not changed automatically. Do not represent the doctor result as fully green or use experimental Worklets bundle-mode workarounds for a release. See [Expo's known-regression notes](https://expo.dev/changelog/sdk-57#known-regressions).
+
 ## What is prepared
 
 - `eas.json`: an internal Android APK `preview` profile and a `production` profile with automatic version increments.
 - `app.json`: ShaktiOS display name, light theme, consistent native art, and the microphone usage explanation.
-- `expo-audio` / `expo-file-system`: SDK-compatible versions, no deprecated `expo-av` dependency.
+- `expo-audio` / `expo-file-system` / `expo-asset`: SDK-compatible direct dependencies, no deprecated `expo-av` dependency.
 - `@react-native/metro-config` is pinned to **0.85.3**, matching React Native's CLI peer. This fixes the observed auto-installed **0.87.1** mismatch without changing the Expo/React Native versions; `pnpm peers check` now passes.
 - Background recording/playback are disabled. Native config tests verify the microphone permission survives plugin composition and that audio foreground-service/background-mode permissions are absent.
 - Camera and audio plugins share the same iOS microphone-purpose text. Setting the camera plugin's microphone permission to `false` can remove the audio plugin's required Info.plist key; do not do that while voice is enabled.
@@ -83,6 +92,7 @@ pnpm run check-types
 pnpm test
 pnpm exec expo install --check
 pnpm peers check
+pnpm dlx expo-doctor # Currently flags the documented Hermes/SDK 56 regression.
 pnpm exec expo export --platform android --clear --output-dir dist-android
 pnpm exec expo export --platform web --clear --output-dir dist-web
 ```

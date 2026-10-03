@@ -74,7 +74,7 @@ Configure `SARVAM_API_KEY` **only on the FastAPI server**, never in Expo public 
 5. Reload the app: verify auth and selected venue restoration. Sign out, sign in as a different citizen and verify the first account's reports are not visible.
 6. Disable the API temporarily: screens must show retry/error states, not fabricated rows or a login loop.
 
-Checks: `pnpm run check-types`, `pnpm test`, `pnpm exec expo install --check`, and Android/web exports. The 12 local tests cover draft validation, multipart transport, confirmation boundaries and native permission configuration. `tests/voice.browser.cjs` exercises exported web UI with synthetic sessions/API data and Chromium's fake microphone; it never contacts real providers. Bundling and mocked checks are not proof of on-device login, microphone/camera/GPS permissions, real Sarvam transcription, or responder delivery.
+Checks: `pnpm run check-types`, `pnpm test`, `pnpm exec expo install --check`, and Android/web exports. The local tests cover draft validation, multipart transport, confirmation boundaries, required native dependencies and permission configuration. Run `pnpm dlx expo-doctor` as well: the remaining SDK 56/Hermes advisory is documented in [BUILD_READINESS.md](BUILD_READINESS.md). `tests/voice.browser.cjs` exercises exported web UI with synthetic sessions/API data and Chromium's fake microphone; it never contacts real providers. Bundling and mocked checks are not proof of on-device login, microphone/camera/GPS permissions, real Sarvam transcription, or responder delivery.
 
 ## Adding components
 
