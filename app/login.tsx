@@ -35,7 +35,7 @@ export default function LoginScreen() {
     try {
       if (mode === 'signin') await login(email.trim(), password);
       else await signUp(email.trim(), password);
-      router.replace('/(tabs)/home');
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Authentication failed. Please try again.');
     } finally {

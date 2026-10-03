@@ -68,7 +68,7 @@ export function VoiceDraftPreview({ draft, venue, onChange, onAccept, onDiscard 
     </View>
     {missing.length > 0 && <Text accessibilityLiveRegion="polite" className="text-[12px] text-destructive">Complete: {missing.join(', ')}.</Text>}
     <PrimaryButton title="Use these details & continue" onPress={onAccept} disabled={missing.length > 0} />
-    <Text className="text-center text-[12px] text-muted-foreground">Next: optional GPS, then a final confirmation before submission.</Text>
+    <Text className="text-center text-[12px] text-muted-foreground">Next: final confirmation before submission. GPS attaches automatically.</Text>
     <PrimaryButton title="Discard voice draft" variant="outline" onPress={onDiscard} />
   </View>;
 }

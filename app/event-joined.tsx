@@ -68,8 +68,8 @@ export default function EventJoinedScreen() {
             </View>
           ) : null}
           <View className="flex-row items-center gap-2 rounded-2xl bg-[#DFF7E8] p-3">
-            <CheckCircle2 size={16} color="#1E7F4D" />
-            <Text className="text-[12px] font-semibold text-[#1E7F4D]">
+            <CheckCircle2 size={16} color="#176B43" />
+            <Text className="text-[12px] font-semibold text-[#176B43]">
               This venue is ready for zone-based reports.
             </Text>
           </View>

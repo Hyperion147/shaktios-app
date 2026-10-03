@@ -48,18 +48,18 @@ For the Android emulator, verify the API from the emulator with `adb shell curl 
 
 - Email/password login and account creation use Supabase Auth. Email confirmation, if enabled in your project, is required before sign-in. No phone/Google login is advertised without an integration.
 - Venue browsing, manual ID entry and QR/deep-link joining resolve `/venues` records. No mock venue or default event is selected. Native selection is persisted with SecureStore; metadata is fetched again from the API.
-- Reports require a chosen venue and canonical zone. GPS is optional; the location screen displays device coordinates and links to their actual map position instead of displaying a made-up street map.
+- Reports require a chosen venue and canonical zone. Location permission is requested once after sign-in; a fresh fix (≤15 min) auto-attaches to every report and the Review screen shows the coordinates that will be sent. Stale or denied GPS falls back to zone-only — no per-report location step. Photo evidence (up to 3, compressed to ≤1600px JPEG on-device) uploads to the Supabase `report-evidence` bucket (see `../shakti-os/supabase/migrations/20261003000000_report_evidence_bucket.sql`) and its public URLs travel in `payload.photo_urls`. Sarvam priority assist (`POST /priority/assess`) suggests urgency from the description while typing; it auto-applies until the citizen picks urgency manually. Reporting is 3 steps: Category → Details (+photo/assist) → Review.
 - `GET /me/reports` and `/me/reports/{id}` return only the authenticated citizen's reports. Status is derived from operator incident state, never a report-ID hash. My Reports reloads the latest 50 records on screen focus. The API supports ownership-filtered limit/offset pagination, but a load-more/pull-to-refresh history UI is not yet implemented.
 - Submission confirmation and detail screens fetch the stored report ID. No fake attachments, contacts, profile stats or historical timestamps are shown. Photo upload, push notifications and emergency dispatch are not implemented or claimed.
 - A backend `401` is shown as an actionable error, not an immediate forced logout while a Supabase session remains valid.
 
 ## Optional voice reporting
 
-1. Join a registered venue, then open **Report Incident → Describe by voice**. Manual category/details/location reporting remains available.
+1. Join a registered venue, then open **Report Incident → Describe by voice**. Manual category/details reporting remains available.
 2. Choose Auto detect or a supported language, record up to **25 seconds**, and optionally play it back. Permission is requested only when starting a recording. Backgrounding stops an active recording; leaving/discarding cleans up temporary audio.
 3. Explicitly consent to sending audio/transcript to Sarvam, then tap **Process voice & preview**. Recording alone never uploads or submits a report.
 4. Review the original transcript and edit the proposed category, description, registered zone and urgency. Unknown/ambiguous fields stay unselected. No GPS or identity is invented.
-5. Accept the edited draft, optionally capture GPS, then inspect the complete **Review Report** screen and tick its confirmation before **Submit Report**. Only the final report fields are saved—not raw audio or the reference transcript.
+5. Accept the edited draft (fresh GPS attaches automatically), then inspect the complete **Review Report** screen and tick its confirmation before **Submit Report**. Only the final report fields are saved—not raw audio or the reference transcript.
 
 Supported speech: **22 Indic languages plus English**, based on Sarvam's current model documentation. This is not a promise of every Indian language or perfect noisy/codemixed recognition; the interface itself remains English. Speech and field suggestions are input assistance, not risk scoring or emergency dispatch.
 
@@ -69,7 +69,7 @@ Configure `SARVAM_API_KEY` **only on the FastAPI server**, never in Expo public 
 
 1. Start FastAPI on port 8000, apply Supabase migrations and run `shakti-os/scripts/seed_supabase.py --apply`. Seed venues are labelled scenarios, not real emergency registrations.
 2. Run `pnpm exec expo start -c`, open Android, sign in and select a registered venue from Event Info (or scan its ID).
-3. Choose a category and zone, enter a description, optionally capture GPS, submit and verify the returned ID under My Reports.
+3. Choose a category and zone, enter a description (priority assist suggests urgency; optional photo), submit and verify the returned ID under My Reports.
 4. Sign in to the dashboard with an operator-authorized account, open the matching incident and move it to Assessing. Refresh My Reports: status must change to Under Review.
 5. Reload the app: verify auth and selected venue restoration. Sign out, sign in as a different citizen and verify the first account's reports are not visible.
 6. Disable the API temporarily: screens must show retry/error states, not fabricated rows or a login loop.

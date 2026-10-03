@@ -13,6 +13,52 @@ export function setAuthToken(token: string | null, identity: string | null = tok
   authToken = token;
 }
 
+/** Token for the current session; falls back to the direct login token. */
+export async function currentAuthToken(): Promise<string | null> {
+  return (await getAccessToken()) ?? authToken;
+}
+
+export function currentAuthRevision(): number {
+  return authRevision;
+}
+
+export function assertAuthRevision(revision: number): void {
+  if (revision !== authRevision)
+    throw new ApiErrorShape('The signed-in account changed. Please retry from the current account.', {
+      code: 'cancelled',
+    });
+}
+
+/** Shared status/body mapping for fetch responses and native upload results. */
+export function decodeApiResponse<T>(status: number, text: string): T {
+  let data: T | undefined;
+  try {
+    data = text ? (JSON.parse(text) as T) : undefined;
+  } catch {
+    if (status >= 200 && status < 300)
+      throw new ApiErrorShape('The server returned an invalid response. Please retry.', {
+        code: 'invalid_response',
+      });
+  }
+
+  if (status < 200 || status >= 300) {
+    const detail =
+      typeof data === 'object' && data !== null && 'detail' in data
+        ? String((data as { detail: unknown }).detail)
+        : `Request failed (${status})`;
+    // Keep backend auth failures visible to the current screen. A 401 can
+    // mean the API rejected a still-valid Supabase session; callers should
+    // offer retry/sign-out guidance instead of forcing an auth loop.
+    throw new ApiErrorShape(status === 401
+      ? 'The server rejected the current session. Retry; if it persists, sign out from Profile and sign in again. If a fresh sign-in still fails, ask the operator to check the API authentication configuration.'
+      : detail, {
+      status,
+      code: status === 401 ? 'unauthorized' : status >= 500 ? 'server' : 'validation',
+    });
+  }
+  return data as T;
+}
+
 export function normalizeError(error: unknown, fallback = 'Something went wrong.'): ApiError {
   if (error instanceof ApiErrorShape) {
     return { message: error.message, status: error.status, code: error.code };
@@ -42,10 +88,7 @@ interface RequestOptions {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const revision = authRevision;
-  const assertCurrentSession = () => {
-    if (revision !== authRevision) throw new ApiErrorShape('The signed-in account changed. Please retry from the current account.', { code: 'cancelled' });
-  };
+  const revision = currentAuthRevision();
   const controller = new AbortController();
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
@@ -57,13 +100,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     // Prefer the live Supabase session so an automatic refresh is reflected
     // in API calls; the direct login token remains a fallback during the
     // SecureStore persistence race immediately after sign-in.
-    const token = options.token !== undefined ? options.token : (await getAccessToken()) ?? authToken;
-    assertCurrentSession();
+    const token = options.token !== undefined ? options.token : await currentAuthToken();
+    assertAuthRevision(revision);
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       signal: controller.signal,
       headers: {
-        // Let fetch set the multipart boundary for native/web audio uploads.
+        // Let fetch set the multipart boundary for web audio uploads.
         ...(!multipart ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
@@ -71,30 +114,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
 
     const text = await res.text();
-    assertCurrentSession();
-    let data: T | undefined;
-    try {
-      data = text ? (JSON.parse(text) as T) : undefined;
-    } catch {
-      if (res.ok) throw new ApiErrorShape('The server returned an invalid response. Please retry.', { code: 'invalid_response' });
-    }
-
-    if (!res.ok) {
-      const detail =
-        typeof data === 'object' && data !== null && 'detail' in data
-          ? String((data as { detail: unknown }).detail)
-          : `Request failed (${res.status})`;
-      // Keep backend auth failures visible to the current screen. A 401 can
-      // mean the API rejected a still-valid Supabase session; callers should
-      // offer retry/sign-out guidance instead of forcing an auth loop.
-      throw new ApiErrorShape(res.status === 401
-        ? 'The server rejected the current session. Retry; if it persists, sign out from Profile and sign in again. If a fresh sign-in still fails, ask the operator to check the API authentication configuration.'
-        : detail, {
-        status: res.status,
-        code: res.status === 401 ? 'unauthorized' : res.status >= 500 ? 'server' : 'validation',
-      });
-    }
-    return data as T;
+    assertAuthRevision(revision);
+    return decodeApiResponse<T>(res.status, text);
   } catch (error) {
     if (error instanceof ApiErrorShape) throw error;
     if (controller.signal.aborted) {

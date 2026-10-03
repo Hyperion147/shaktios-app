@@ -69,6 +69,13 @@
           "enableBackgroundPlayback": false
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ShaktiOS to attach photo evidence to incident reports.",
+          "cameraPermission": "Allow ShaktiOS to capture photo evidence for incident reports."
+        }
+      ],
       "expo-asset"
     ],
     "extra": {

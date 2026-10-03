@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { IncidentCategoryId } from '@/src/types';
 
-export const BRAND = '#6468F0';
+export const BRAND = THEME.light.primary;
 const INK = THEME.light.foreground;
 
 /* ---------------- Brand logo ---------------- */
@@ -69,12 +69,12 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               <View
                 className={cn(
                   'h-7 w-7 items-center justify-center rounded-full',
-                  active || done ? 'bg-primary' : 'bg-border/60'
+                  active || done ? 'bg-primary' : 'bg-secondary'
                 )}>
                 <Text
                   className={cn(
                     'text-[13px] font-bold',
-                    active || done ? 'text-primary-foreground' : 'text-muted-foreground'
+                    active || done ? 'text-primary-foreground' : 'text-secondary-foreground'
                   )}>
                   {done ? '✓' : i + 1}
                 </Text>
@@ -132,13 +132,13 @@ export function PrimaryButton({
 /* ---------------- Category tiles ---------------- */
 
 const CATEGORY_META: Record<IncidentCategoryId, { icon: typeof Flame; bg: string; fg: string }> = {
-  crowd: { icon: Users, bg: '#EEEDFF', fg: '#6468F0' },
-  medical: { icon: HeartPulse, bg: '#FFE9E9', fg: '#E5484D' },
-  fire_smoke: { icon: Flame, bg: '#FFF1E3', fg: '#E8830C' },
-  suspicious: { icon: Eye, bg: '#E7F0FF', fg: '#2F6FED' },
-  lost_person: { icon: UserSearch, bg: '#E4F5F0', fg: '#12A594' },
-  violence: { icon: AlertTriangle, bg: '#FFE9E9', fg: '#E5484D' },
-  infrastructure: { icon: Wrench, bg: '#EEEDFF', fg: '#6468F0' },
+  crowd: { icon: Users, bg: '#EEEDFF', fg: '#575AD0' },
+  medical: { icon: HeartPulse, bg: '#FFE9E9', fg: '#C62828' },
+  fire_smoke: { icon: Flame, bg: '#FFF1E3', fg: '#A65300' },
+  suspicious: { icon: Eye, bg: '#E7F0FF', fg: '#2059B8' },
+  lost_person: { icon: UserSearch, bg: '#E4F5F0', fg: '#08766A' },
+  violence: { icon: AlertTriangle, bg: '#FFE9E9', fg: '#C62828' },
+  infrastructure: { icon: Wrench, bg: '#EEEDFF', fg: '#575AD0' },
   other: { icon: HelpCircle, bg: '#EAF0F6', fg: '#5B6B7C' },
 };
 
@@ -201,11 +201,11 @@ export function InfoNote({ text }: { text: string }) {
 }
 
 const PILL_STYLES: Record<string, { bg: string; fg: string }> = {
-  under_review: { bg: '#FFF4D6', fg: '#9A6A00' },
-  received: { bg: '#E3F2FF', fg: '#1B6FD0' },
-  action_initiated: { bg: '#FFEAD1', fg: '#B25E09' },
-  submitted: { bg: '#E3F2FF', fg: '#1B6FD0' },
-  resolved: { bg: '#DFF7E8', fg: '#1E7F4D' },
+  under_review: { bg: '#FFF4D6', fg: '#805500' },
+  received: { bg: '#E3F2FF', fg: '#1759A6' },
+  action_initiated: { bg: '#FFEAD1', fg: '#8A4600' },
+  submitted: { bg: '#E3F2FF', fg: '#1759A6' },
+  resolved: { bg: '#DFF7E8', fg: '#176B43' },
 };
 
 export function StatusPill({ status, label }: { status: string; label?: string }) {

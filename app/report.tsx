@@ -27,7 +27,7 @@ export default function ReportCategoryScreen() {
     <ScreenContainer className="px-0">
       <View className="px-5">
         <ScreenHeader title="Report Incident" onBack={() => router.back()} />
-        <Stepper steps={['Category', 'Details', 'Location', 'Review']} current={0} />
+        <Stepper steps={['Category', 'Details', 'Review']} current={0} />
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
         <VenueState />

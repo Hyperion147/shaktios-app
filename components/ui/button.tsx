@@ -91,10 +91,14 @@ const buttonTextVariants = cva(
 type ButtonProps = React.ComponentProps<typeof Pressable> & React.RefAttributes<typeof Pressable> & VariantProps<typeof buttonVariants>;
 
 function Button({ className, variant, size, ...props }: ButtonProps) {
+  // Disabled buttons use a solid muted background with dark text instead of an
+  // opacity fade: white text on faded primary drops below 3:1 contrast.
+  const disabled = !!props.disabled;
   return (
-    <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
+    <TextClassContext.Provider
+      value={disabled ? buttonTextVariants({ variant: 'secondary', size }) : buttonTextVariants({ variant, size })}>
       <Pressable
-        className={cn(props.disabled && 'opacity-50', buttonVariants({ variant, size }), className)}
+        className={cn(buttonVariants({ variant, size }), disabled && 'bg-muted', className)}
         role="button"
         {...props}
       />

@@ -67,7 +67,7 @@ export default function HomeScreen() {
     {
       label: 'Report Incident',
       sub: 'Notify the safety team',
-      icon: <Siren size={22} color="#E5484D" />,
+      icon: <Siren size={22} color="#C62828" />,
       route: '/report',
     },
     {
@@ -79,13 +79,13 @@ export default function HomeScreen() {
     {
       label: 'My Reports',
       sub: 'View your past reports',
-      icon: <FileText size={22} color="#2F6FED" />,
+      icon: <FileText size={22} color="#2059B8" />,
       route: '/(tabs)/reports',
     },
     {
       label: 'Event Info',
       sub: 'Details and helpline',
-      icon: <Info size={22} color="#12A594" />,
+      icon: <Info size={22} color="#08766A" />,
       route: '/event-info',
     },
   ];
@@ -118,7 +118,7 @@ export default function HomeScreen() {
           <View className="gap-2 rounded-3xl bg-primary p-5">
             <View className="flex-row items-center gap-1.5">
               <CalendarDays size={13} color="#fff" />
-              <Text className="text-[11px] font-bold uppercase tracking-wider text-white/85">
+              <Text className="text-[11px] font-bold uppercase tracking-wider text-white">
                 Selected Event
               </Text>
             </View>
@@ -127,10 +127,10 @@ export default function HomeScreen() {
             </Text>
             <View className="flex-row items-center gap-1.5">
               <MapPin size={13} color="#fff" />
-              <Text className="text-[12px] text-white/90">{eventLocation}</Text>
+              <Text className="text-[12px] text-white">{eventLocation}</Text>
             </View>
             <View className="flex-row items-center justify-between">
-              <Text className="text-[12px] text-white/90">{dates ?? activeEvent.status}</Text>
+              <Text className="text-[12px] text-white">{dates ?? activeEvent.status}</Text>
               <Pressable
                 onPress={() => router.push('/event-info')}
                 className="rounded-full bg-white px-3.5 py-1.5">
@@ -222,7 +222,7 @@ export default function HomeScreen() {
                 }
                 className="flex-row items-center gap-3 rounded-3xl border border-border bg-card p-4 active:opacity-80">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-[#FFE9E9]">
-                  <Siren size={20} color="#E5484D" />
+                  <Siren size={20} color="#C62828" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-[13px] font-bold">{categoryLabel(payload.category)}</Text>

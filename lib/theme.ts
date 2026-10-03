@@ -1,10 +1,9 @@
 import { DefaultTheme, type Theme } from 'expo-router/react-navigation';
 
 // Single light theme — dark mode was removed from globals.css.
-// Hex values below are sRGB conversions of the original oklch tokens in
-// global.css, for APIs (React Navigation, TextInput props) that need
-// concrete colors instead of classNames. Keep them in sync with
-// global.css :root and tailwind.config.js.
+// These contrast-checked sRGB values are also used by APIs (React Navigation,
+// TextInput props) that need concrete colors instead of classNames. Keep them
+// in sync with global.css :root and tailwind.config.js.
 export const THEME = {
   light: {
     background: '#F6F7F9',
@@ -13,19 +12,21 @@ export const THEME = {
     cardForeground: '#1D293D',
     popover: '#FFFFFF',
     popoverForeground: '#1D293D',
-    primary: '#6468F0',
+    primary: '#575AD0',
     primaryForeground: '#FFFFFF',
     secondary: '#E4E8EF',
     secondaryForeground: '#364050',
     muted: '#F5F5F5',
-    mutedForeground: '#6C727E',
+    mutedForeground: '#626B78',
     accent: '#E1E7FD',
     accentForeground: '#364050',
-    destructive: '#F14444',
+    destructive: '#C62828',
     destructiveForeground: '#FFFFFF',
     border: '#DBE0E9',
-    input: '#DBE0E9',
-    ring: '#6468F0',
+    // Input boundary darkened so text fields meet 3:1 non-text contrast
+    // against their filled backgrounds (#F6F7F9 / #FFFFFF).
+    input: '#768092',
+    ring: '#575AD0',
     radius: '0.625rem',
   },
 };

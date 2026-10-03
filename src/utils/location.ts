@@ -38,6 +38,17 @@ export async function captureLocation(timeoutMs = 15_000): Promise<ReportLocatio
   } finally { if (timer) clearTimeout(timer); }
 }
 
+/** Fresh GPS (default 15 min) is safe to auto-attach; stale fixes mislead responders. */
+export function isLocationFresh(
+  timestamp: string | null | undefined,
+  maxAgeMs = 15 * 60 * 1000,
+  nowMs = Date.now()
+): boolean {
+  if (!timestamp) return false;
+  const captured = Date.parse(timestamp);
+  return Number.isFinite(captured) && captured <= nowMs && nowMs - captured <= maxAgeMs;
+}
+
 export function formatCoords(loc: ReportLocation): string {
   const acc = loc.accuracy != null ? ` ±${Math.round(loc.accuracy)}m` : '';
   return `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}${acc}`;

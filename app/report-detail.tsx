@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Image, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { CalendarDays, MapPin } from 'lucide-react-native';
@@ -62,6 +62,9 @@ export default function ReportDetailScreen() {
   const longitude = typeof payload.longitude === 'number' ? payload.longitude : null;
   const locationLabel =
     typeof payload.location_label === 'string' ? payload.location_label : report.location;
+  const photoUrls = Array.isArray(payload.photo_urls)
+    ? payload.photo_urls.filter((url): url is string => typeof url === 'string' && url.startsWith('http')).slice(0, 3)
+    : [];
   const submitted = new Date(report.timestamp).toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -134,6 +137,17 @@ export default function ReportDetailScreen() {
             </Text>
           )}
         </Card>
+
+        {photoUrls.length ? (
+          <Card className="gap-1.5 rounded-3xl p-4">
+            <Text className="text-[13px] font-bold">Photo evidence</Text>
+            <View className="flex-row flex-wrap gap-2 py-1">
+              {photoUrls.map((url) => (
+                <Image key={url} source={{ uri: url }} className="h-24 w-24 rounded-xl border border-border bg-card" />
+              ))}
+            </View>
+          </Card>
+        ) : null}
 
         {report.incident_id ? (
           <Card className="gap-1.5 rounded-3xl p-4">

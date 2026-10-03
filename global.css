@@ -9,9 +9,8 @@
  * React Native cannot parse oklch() and react-native-css-interop (which
  * powers NativeWind) cannot resolve var(--x) into native colors, so every
  * bg-background / text-primary / border-border etc. class silently renders
- * nothing on iOS/Android. Hex values below are sRGB conversions of the
- * original oklch tokens. Keep them in sync with tailwind.config.js and
- * lib/theme.ts (single light theme).
+ * nothing on iOS/Android. Hex values below are contrast-checked sRGB colors.
+ * Keep them in sync with tailwind.config.js and lib/theme.ts (single light theme).
  */
 @layer base {
   :root {
@@ -21,32 +20,32 @@
     --card-foreground: #1d293d;
     --popover: #ffffff;
     --popover-foreground: #1d293d;
-    --primary: #6468f0;
+    --primary: #575ad0;
     --primary-foreground: #ffffff;
     --secondary: #e4e8ef;
     --secondary-foreground: #364050;
     --muted: #f5f5f5;
-    --muted-foreground: #6c727e;
+    --muted-foreground: #626b78;
     --accent: #e1e7fd;
     --accent-foreground: #364050;
-    --destructive: #f14444;
+    --destructive: #c62828;
     --destructive-foreground: #ffffff;
     --border: #dbe0e9;
-    --input: #dbe0e9;
-    --ring: #6468f0;
+    --input: #768092;
+    --ring: #575ad0;
     --radius: 0.625rem;
-    --chart-1: #6468f0;
+    --chart-1: #575ad0;
     --chart-2: #4f46e5;
     --chart-3: #443bc9;
     --chart-4: #3730a5;
     --chart-5: #312d84;
     --sidebar: #f5f5f5;
     --sidebar-foreground: #1d293d;
-    --sidebar-primary: #6468f0;
+    --sidebar-primary: #575ad0;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #e1e7fd;
     --sidebar-accent-foreground: #364050;
     --sidebar-border: #dbe0e9;
-    --sidebar-ring: #6468f0;
+    --sidebar-ring: #575ad0;
   }
 }

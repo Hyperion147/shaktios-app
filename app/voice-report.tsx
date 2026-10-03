@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { Mic, Square, Play, Pause, ChevronDown, ShieldCheck } from 'lucide-react-native';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { PrimaryButton, ScreenHeader, Stepper } from '@/src/components/design';
@@ -13,6 +13,7 @@ import { useVoiceRecorder } from '@/src/hooks/useVoiceRecorder';
 import { fetchVoiceConfig, requestVoiceDraft } from '@/src/api/voice';
 import { normalizeError } from '@/src/api/client';
 import { confirmedVoicePatch, MAX_VOICE_SECONDS } from '@/src/utils/voice-draft';
+import { isLocationFresh } from '@/src/utils/location';
 import type { VoiceConfig, VoiceDraft } from '@/src/types/voice';
 import type { VenueEvent } from '@/src/types';
 import { THEME } from '@/lib/theme';
@@ -21,15 +22,43 @@ import { cn } from '@/lib/utils';
 function Playback({ uri, disabled }: { uri: string; disabled: boolean }) {
   const player = useAudioPlayer(uri);
   const status = useAudioPlayerStatus(player);
+  const [playError, setPlayError] = React.useState<string | null>(null);
   React.useEffect(() => { if (disabled) player.pause(); }, [disabled, player]);
-  return <Pressable accessibilityRole="button" accessibilityLabel={status.playing ? 'Pause recording' : 'Listen to recording'}
-    disabled={disabled} onPress={() => {
-      if (status.playing) player.pause();
-      else { if (status.didJustFinish) void player.seekTo(0); player.play(); }
-    }} className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card p-3">
-    {status.playing ? <Pause size={18} color={THEME.light.primary} /> : <Play size={18} color={THEME.light.primary} />}
-    <Text className="font-semibold text-primary">{status.playing ? 'Pause recording' : 'Listen to recording'}</Text>
-  </Pressable>;
+  const toggle = async () => {
+    if (disabled) return;
+    setPlayError(null);
+    try {
+      if (status.playing) {
+        player.pause();
+        return;
+      }
+      // Recording leaves the session in record mode; force playback mode
+      // (incl. iOS silent switch) before playing, otherwise play() is silent.
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+        shouldPlayInBackground: false,
+      });
+      if (status.didJustFinish) await player.seekTo(0);
+      player.play();
+    } catch {
+      setPlayError('Could not play this recording. Try recording again.');
+    }
+  };
+  const label = status.playing ? 'Pause recording' : 'Listen to recording';
+  return <View className="gap-1">
+    <Pressable accessibilityRole="button" accessibilityLabel={label}
+      disabled={disabled} onPress={() => { void toggle(); }} className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card p-3">
+      {status.playing ? <Pause size={18} color={THEME.light.primary} /> : <Play size={18} color={THEME.light.primary} />}
+      <Text className="font-semibold text-primary">{label}</Text>
+    </Pressable>
+    {!status.isLoaded && !status.error && !playError
+      ? <Text className="text-center text-[11px] text-muted-foreground">Loading preview…</Text>
+      : null}
+    {status.error || playError
+      ? <Text accessibilityRole="alert" className="text-center text-[12px] text-destructive">{playError ?? 'This recording could not be loaded. Record again.'}</Text>
+      : null}
+  </View>;
 }
 
 export default function VoiceReportScreen() {
@@ -47,7 +76,7 @@ export default function VoiceReportScreen() {
 
 function VoiceCapture({ venue }: { venue: VenueEvent }) {
   const router = useRouter();
-  const { setDraft, setPendingLocation } = useSession();
+  const { setDraft, setPendingLocation, deviceLocation } = useSession();
   const recording = useVoiceRecorder();
   const [config, setConfig] = React.useState<VoiceConfig | null>(null);
   const [configLoading, setConfigLoading] = React.useState(true);
@@ -128,8 +157,8 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
     if (!preview) return;
     try {
       setDraft(confirmedVoicePatch(preview, venue));
-      setPendingLocation(null);
-      router.replace('/location');
+      setPendingLocation(isLocationFresh(deviceLocation?.timestamp) ? deviceLocation : null);
+      router.replace('/review');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Please review the draft.'); }
   };
   const activeRecording = recording.phase === 'recording';
@@ -138,7 +167,7 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
 
   return <ScreenContainer className="px-0">
     <View className="px-5"><ScreenHeader title="Report by voice" onBack={() => router.back()} />
-      <Stepper steps={['Voice', 'Preview', 'Location', 'Review']} current={preview ? 1 : 0} />
+      <Stepper steps={['Voice', 'Preview', 'Review']} current={preview ? 1 : 0} />
     </View>
     <ScrollView ref={scroll} className="flex-1 px-5" contentContainerClassName="gap-4 pb-8" keyboardShouldPersistTaps="handled">
       {preview ? <VoiceDraftPreview draft={preview} venue={venue}
@@ -180,7 +209,7 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
         {recording.error && <Text accessibilityRole="alert" className="text-[13px] text-destructive">{recording.error}</Text>}
         {recording.permissionDenied && Platform.OS !== 'web' && <PrimaryButton title="Open microphone settings" variant="outline" onPress={() => { void Linking.openSettings().catch(() => setError('Open your device settings to allow microphone access.')); }} />}
         {recording.uri && <>
-          <Playback uri={recording.uri} disabled={processing} />
+          <Playback key={recording.uri} uri={recording.uri} disabled={processing} />
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent, disabled: processing }} disabled={processing}
             onPress={() => setConsent((value) => !value)} className="flex-row items-start gap-3 rounded-2xl border border-border bg-card p-4">
             <View className={cn('mt-0.5 size-6 items-center justify-center rounded-md border', consent ? 'border-primary bg-primary' : 'border-border')}><Text className="font-bold text-white">{consent ? '✓' : ''}</Text></View>

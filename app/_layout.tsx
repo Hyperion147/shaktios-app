@@ -25,13 +25,13 @@ function SessionStack() {
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Protected guard={Boolean(user)}>
+        <Stack.Screen name="setup-location" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="event-info" />
         <Stack.Screen name="event-joined" />
         <Stack.Screen name="report" />
         <Stack.Screen name="voice-report" />
         <Stack.Screen name="report-details" />
-        <Stack.Screen name="location" />
         <Stack.Screen name="review" />
         <Stack.Screen name="submitted" />
         <Stack.Screen name="report-detail" />

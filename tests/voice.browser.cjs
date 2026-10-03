@@ -94,6 +94,7 @@ async function main() {
     await page.getByPlaceholder('you@mail.com').fill(user.email);
     await page.getByPlaceholder('••••••••').fill('synthetic-password-not-real');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.getByRole('button', { name: 'Skip for now', exact: true }).click();
     await page.getByText('Join Event', { exact: true }).first().click();
     await page.getByText('Select Event', { exact: true }).click();
     await page.getByText('Join this event', { exact: true }).click();
@@ -132,7 +133,6 @@ async function main() {
     await save(page, 'voice-preview');
     results.push('Multipart speech result prefills an editable multilingual preview');
     await page.getByRole('button', { name: 'Use these details & continue', exact: true }).click();
-    await page.getByRole('button', { name: 'Continue with zone only', exact: true }).click();
     const submit = page.getByRole('button', { name: 'Submit Report', exact: true });
     await submit.waitFor();
     assert.equal(await submit.isDisabled(), true);

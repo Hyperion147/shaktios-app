@@ -14,6 +14,8 @@ export interface SubmitReportInput {
   accuracy?: number | null;
   eventId: string;
   urgency?: 'normal' | 'low' | 'medium' | 'high';
+  /** Public Supabase Storage URLs for compressed photo evidence (max 3). */
+  photo_urls?: string[];
 }
 
 const URGENCY_CONFIDENCE = { normal: 0.7, low: 0.7, medium: 0.7, high: 0.9 } as const;
@@ -42,6 +44,7 @@ export async function submitReport(input: SubmitReportInput): Promise<BackendEve
         venue_event_id: eventId,
         location_label: input.locationLabel.trim(),
         urgency: input.urgency ?? 'normal',
+        photo_urls: (input.photo_urls ?? []).filter((url) => typeof url === 'string' && url.startsWith('http')).slice(0, 3),
       },
     },
   });

@@ -169,7 +169,7 @@ export function ScanView() {
               <Text
                 className={cn(
                   'text-center text-[14px] font-bold',
-                  tab === item.id ? 'text-primary-foreground' : 'text-muted-foreground'
+                  tab === item.id ? 'text-primary-foreground' : 'text-secondary-foreground'
                 )}>
                 {item.label}
               </Text>
@@ -205,10 +205,10 @@ export function ScanView() {
                 setCameraOpen(true);
               }}
               className="h-80 items-center justify-center gap-3 rounded-3xl bg-[#C9C9D4]/60 active:opacity-80">
-              <View className="h-40 w-40 items-center justify-center rounded-2xl border-2 border-dashed border-white/80 bg-white/25">
+              <View className="h-40 w-40 items-center justify-center rounded-2xl border-2 border-dashed border-[#3D3D4D]/50 bg-white/25">
                 <QrCode size={110} color="#3D3D4D" />
               </View>
-              <Text className="text-center text-[13px] font-semibold text-white">
+              <Text className="text-center text-[13px] font-semibold text-[#3D3D4D]">
                 Tap to open camera and scan an event QR code
               </Text>
             </Pressable>
@@ -235,9 +235,9 @@ export function ScanView() {
               <Pressable
                 disabled={locked}
                 onPress={submitCode}
-                className="justify-center rounded-2xl bg-primary px-5 disabled:opacity-50">
+                className="justify-center rounded-2xl bg-primary px-5 disabled:bg-muted">
                 {locked ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={THEME.light.secondaryForeground} />
                 ) : (
                   <Text className="font-bold text-primary-foreground">Join</Text>
                 )}
@@ -311,7 +311,7 @@ export function ScanView() {
                     }}
                     className={cn(
                       'mt-2 rounded-2xl py-3',
-                      !joinable ? 'bg-muted opacity-60' : active ? 'bg-secondary' : 'bg-primary'
+                      !joinable ? 'bg-muted' : active ? 'bg-secondary' : 'bg-primary'
                     )}>
                     <Text
                       className={cn(
@@ -341,7 +341,7 @@ export function ScanView() {
         <AlertDialogContent className="items-center gap-2 rounded-3xl border-border bg-card p-6">
           <AlertDialogHeader className="items-center">
             <View className="h-24 w-24 items-center justify-center rounded-full bg-[#DFF7E8]">
-              <CheckCircle2 size={52} color="#1E7F4D" />
+              <CheckCircle2 size={52} color="#176B43" />
             </View>
             <AlertDialogTitle className="mt-1 text-center text-[19px] font-extrabold">
               Event found

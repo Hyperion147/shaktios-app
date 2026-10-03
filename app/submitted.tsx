@@ -10,6 +10,7 @@ import { ErrorState, LoadingState } from '@/src/components/States';
 import { fetchMyReport } from '@/src/api/reports';
 import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
+import { THEME } from '@/lib/theme';
 import type { ApiError } from '@/src/types';
 
 const reportError = (error: ApiError) => `${error.message} Your report may already be stored. Check My Reports before submitting another.`;
@@ -59,7 +60,7 @@ export default function SubmittedScreen() {
         <View className="relative items-center justify-center">
           <View className="absolute h-28 w-28 rounded-full bg-[#EEEDFF]" />
           <View className="absolute h-20 w-20 rounded-full bg-[#E0DEFF]" />
-          <Send size={44} color="#6468F0" />
+          <Send size={44} color={THEME.light.primary} />
         </View>
         <Text className="mt-2 text-[20px] font-extrabold">Report submitted</Text>
         <Text variant="muted" className="text-center text-[13px] leading-5">

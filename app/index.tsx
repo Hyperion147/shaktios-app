@@ -42,7 +42,7 @@ function Splash() {
 }
 
 export default function Index() {
-  const { initializing, user } = useSession();
+  const { initializing, user, locationSetupDone, locationLoading } = useSession();
   const [minElapsed, setMinElapsed] = React.useState(false);
 
   React.useEffect(() => {
@@ -50,11 +50,14 @@ export default function Index() {
     return () => clearTimeout(t);
   }, []);
 
-  if (initializing || !minElapsed) {
+  if (initializing || locationLoading || !minElapsed) {
     return <Splash />;
   }
   if (!user) {
     return <Redirect href="/login" />;
+  }
+  if (!locationSetupDone) {
+    return <Redirect href="/setup-location" />;
   }
   return <Redirect href="/(tabs)/home" />;
 }

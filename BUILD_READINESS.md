@@ -116,7 +116,7 @@ This serves exported assets using browser route fixtures, uses Chromium's **fake
 - Confirm no audio uploads before the consent checkbox and **Process voice & preview** action.
 - Verify real Sarvam transcription/field extraction after configuring the backend key; exercise silence, slow/offline requests, invalid credentials and provider quota failures.
 - Verify omitted/ambiguous zones or categories remain unselected. Edit every proposed field and confirm the canonical zone belongs to the selected venue.
-- Attach GPS only through the explicit device-location action, or continue without GPS.
+- Grant location at setup and confirm GPS auto-attaches on Review; deny it and confirm zone-only reporting. Capture a photo, confirm compression/upload, and check priority-assist urgency suggestion.
 - Check all final data, tick the review confirmation, submit once, and read back the stored report under the same citizen account.
 - Switch accounts/venues during a draft and confirm there is no stale audio, preview or cross-account report access.
 
