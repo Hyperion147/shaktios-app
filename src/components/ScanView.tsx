@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { CheckCircle2, QrCode } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -60,6 +60,26 @@ export function ScanView() {
   const [locked, setLocked] = React.useState(false);
   const [venues, setVenues] = React.useState<VenueEvent[] | null>(null);
   const [venuesError, setVenuesError] = React.useState<string | null>(null);
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const focused = React.useRef(false);
+  const resolving = React.useRef(false);
+  const generation = React.useRef(0);
+  useFocusEffect(React.useCallback(() => {
+    focused.current = true;
+    return () => {
+      focused.current = false;
+      ++generation.current;
+      resolving.current = false;
+      setCameraOpen(false);
+      setFound(null);
+      setLocked(false);
+    };
+  }, []));
+  React.useEffect(() => {
+    if (typeof eventId !== 'string') return;
+    try { setCode(parseEventQr(eventId).eventId); setTab('scan'); }
+    catch { setError('This link does not contain a valid event id.'); }
+  }, [eventId]);
 
   const loadVenues = React.useCallback(async () => {
     setVenuesError(null);
@@ -76,9 +96,14 @@ export function ScanView() {
 
   const resolve = React.useCallback(
     async (raw: string): Promise<boolean> => {
+      if (resolving.current || !focused.current) return false;
+      resolving.current = true;
+      setLocked(true);
+      const revision = ++generation.current;
       try {
         const parsed = parseEventQr(raw);
         const event = await validateEventId(parsed.eventId);
+        if (!focused.current || revision !== generation.current) return false;
         if (!event) {
           setError(`Venue event "${parsed.eventId}" was not found.`);
           return false;
@@ -87,15 +112,17 @@ export function ScanView() {
         setFound(event);
         return true;
       } catch (e) {
-        setError(normalizeError(e, 'Could not validate this event code.').message);
+        if (focused.current && revision === generation.current) setError(normalizeError(e, 'Could not validate this event code.').message);
         return false;
+      } finally {
+        if (revision === generation.current) { resolving.current = false; setLocked(false); }
       }
     },
     [validateEventId]
   );
 
   const handleBarcode = async ({ data }: { data: string }) => {
-    if (locked) return;
+    if (locked || resolving.current || found) return;
     setLocked(true);
     const ok = await resolve(data);
     if (ok) setCameraOpen(false);
@@ -127,7 +154,7 @@ export function ScanView() {
         <ScreenHeader title="Join Event" onBack={() => router.back()} />
       </View>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'scan' | 'select')}>
+      <Tabs value={tab} onValueChange={(v) => { setCameraOpen(false); ++generation.current; resolving.current = false; setLocked(false); setTab(v as 'scan' | 'select'); }}>
         <TabsList className="mx-5 my-3 h-auto rounded-2xl bg-secondary/80 p-1.5">
           {(
             [
@@ -152,7 +179,7 @@ export function ScanView() {
       </Tabs>
 
       {tab === 'scan' ? (
-        <View className="flex-1 gap-3 px-5 pb-6">
+        <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6" keyboardShouldPersistTaps="handled">
           {cameraOpen && permission?.granted ? (
             <View className="h-80 overflow-hidden rounded-3xl bg-foreground">
               <CameraView
@@ -166,7 +193,9 @@ export function ScanView() {
             <Pressable
               onPress={async () => {
                 if (!permission?.granted) {
+                  const revision = generation.current;
                   const result = await requestPermission();
+                  if (!focused.current || revision !== generation.current) return;
                   if (!result.granted) {
                     setError('Camera access is needed to scan. Enter the event id manually below.');
                     return;
@@ -231,10 +260,10 @@ export function ScanView() {
             </View>
           ) : null}
 
-          <InfoNote text="Use an event QR code or id provided by the event organizer." />
-        </View>
+          <InfoNote text="Use an event QR code or id provided by the event organizer. Linked ids require the same validation and confirmation." />
+        </ScrollView>
       ) : (
-        <View className="flex-1 gap-3 px-5 pb-6">
+        <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
           {venuesError ? (
             <ErrorState title="Couldn't load events" message={venuesError} onRetry={loadVenues} />
           ) : venues === null ? (
@@ -298,7 +327,7 @@ export function ScanView() {
               );
             })
           )}
-        </View>
+        </ScrollView>
       )}
 
       <AlertDialog

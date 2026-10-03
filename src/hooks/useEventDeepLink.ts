@@ -6,7 +6,7 @@ import { parseEventQr } from '@/src/utils/qr';
 
 /** Open a venue link in the join screen, with visible validation and retry. */
 export function useEventDeepLink() {
-  const { initializing } = useSession();
+  const { initializing, user } = useSession();
   const router = useRouter();
   const [eventId, setEventId] = React.useState<string | null>(null);
 
@@ -25,8 +25,8 @@ export function useEventDeepLink() {
   }, []);
 
   React.useEffect(() => {
-    if (initializing || !eventId) return;
-    router.replace({ pathname: '/scan', params: { eventId } });
+    if (initializing || !user || !eventId) return;
+    router.replace({ pathname: '/(tabs)/scan', params: { eventId } });
     setEventId(null);
-  }, [initializing, eventId, router]);
+  }, [initializing, user, eventId, router]);
 }

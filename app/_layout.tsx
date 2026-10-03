@@ -21,11 +21,13 @@ function SessionStack() {
   const { user, initializing } = useSession();
   if (initializing) return <ScreenContainer><LoadingState title="Restoring session…" /></ScreenContainer>;
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack key={user?.id ?? 'signed-out'} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Protected guard={Boolean(user)}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="event-info" />
+        <Stack.Screen name="event-joined" />
         <Stack.Screen name="report" />
         <Stack.Screen name="voice-report" />
         <Stack.Screen name="report-details" />

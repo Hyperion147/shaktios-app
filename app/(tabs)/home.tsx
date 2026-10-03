@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { CalendarDays, FileText, Info, MapPin, QrCode, Siren, WifiOff } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -55,23 +56,8 @@ function errorMessage(error: ReturnType<typeof normalizeError>): string {
 export default function HomeScreen() {
   const router = useRouter();
   const { user, activeEvent } = useSession();
-  const [recent, setRecent] = React.useState<CitizenReportRecord[] | null>(null);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-
-  const loadRecent = React.useCallback(async () => {
-    setLoadError(null);
-    try {
-      setRecent(await fetchMyReports(5, 0));
-    } catch (e) {
-      setLoadError(errorMessage(normalizeError(e)));
-    }
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void loadRecent();
-    }, [loadRecent])
-  );
+  const readRecent = React.useCallback((signal: AbortSignal) => fetchMyReports(5, 0, signal), []);
+  const { data: recent, error: loadError, reload: loadRecent } = useFocusedResource(readRecent, errorMessage);
 
   const name = displayName(user?.name, user?.email);
   const dates = eventDates(activeEvent?.startTime, activeEvent?.endTime);

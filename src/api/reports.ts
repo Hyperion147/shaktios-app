@@ -48,15 +48,15 @@ export async function submitReport(input: SubmitReportInput): Promise<BackendEve
 }
 
 /** Server-authoritative, ownership-filtered citizen reports. */
-export function fetchMyReports(limit = 50, offset = 0): Promise<CitizenReportRecord[]> {
+export function fetchMyReports(limit = 50, offset = 0, signal?: AbortSignal): Promise<CitizenReportRecord[]> {
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
-  return apiRequest<CitizenReportRecord[]>(`/me/reports?${params.toString()}`);
+  return apiRequest<CitizenReportRecord[]>(`/me/reports?${params.toString()}`, { signal });
 }
 
 /** Fetch one report; the backend returns 404 for a missing or unowned id. */
-export function fetchMyReport(id: string): Promise<CitizenReportRecord> {
-  return apiRequest<CitizenReportRecord>(`/me/reports/${encodeURIComponent(id)}`);
+export function fetchMyReport(id: string, signal?: AbortSignal): Promise<CitizenReportRecord> {
+  return apiRequest<CitizenReportRecord>(`/me/reports/${encodeURIComponent(id)}`, { signal });
 }

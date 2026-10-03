@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { CalendarDays, MapPin } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -26,33 +27,11 @@ function reportErrorMessage(error: ReturnType<typeof normalizeError>): string {
 export default function ReportDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const [report, setReport] = React.useState<CitizenReportRecord | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const load = React.useCallback(async () => {
-    if (!id) {
-      setError('No report id was provided.');
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setReport(await fetchMyReport(id));
-    } catch (e) {
-      setReport(null);
-      setError(reportErrorMessage(normalizeError(e)));
-    } finally {
-      setLoading(false);
-    }
+  const readReport = React.useCallback((signal: AbortSignal) => {
+    if (typeof id !== 'string' || !id) return Promise.reject(new Error('No report id was provided.'));
+    return fetchMyReport(id, signal);
   }, [id]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void load();
-    }, [load])
-  );
+  const { data: report, loading, error, reload: load } = useFocusedResource(readReport, reportErrorMessage);
 
   if (loading) {
     return (

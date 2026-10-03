@@ -45,7 +45,7 @@ export function useVoiceRecorder() {
     uriRef.current = null;
     if (focused.current) setUri(null);
     try {
-      if (recorder.isRecording) await recorder.stop();
+      if (recorder.isRecording || recorder.getStatus().canRecord) await recorder.stop();
       discardRecording(recorder.uri);
     } catch { /* The native object may already be released during navigation. */ }
     discardRecording(previousUri);
@@ -83,7 +83,7 @@ export function useVoiceRecorder() {
   React.useEffect(() => {
     statusHandler.current = (status) => {
       if (!focused.current || !acceptStatus.current || !['recording', 'stopping'].includes(phaseRef.current)) {
-        if (status.isFinished && status.url) discardRecording(status.url);
+        if (status.isFinished && status.url && status.url !== uriRef.current) discardRecording(status.url);
         return;
       }
       if (status.hasError) {
@@ -102,9 +102,11 @@ export function useVoiceRecorder() {
 
   const start = React.useCallback(async () => {
     if (['preparing', 'recording', 'stopping'].includes(phaseRef.current)) return;
-    await clear();
-    if (!focused.current) return;
+    const clearing = clear();
     const revision = generation.current;
+    updatePhase('preparing');
+    await clearing;
+    if (!focused.current || revision !== generation.current) return;
     updatePhase('preparing');
     setError(null);
     setPermissionDenied(false);
@@ -121,7 +123,7 @@ export function useVoiceRecorder() {
       if (!focused.current || revision !== generation.current) { await restoreAudio(); return; }
       await recorder.prepareToRecordAsync();
       if (!focused.current || revision !== generation.current) { await clear(); return; }
-      if (AppState.currentState === 'background') { await clear(); return; }
+      if (AppState.currentState !== 'active') { await clear(); return; }
       acceptStatus.current = true;
       startedAt.current = Date.now();
       // One duration owner: a second JS stop timer races the recorder's own
@@ -148,9 +150,10 @@ export function useVoiceRecorder() {
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
       if (next !== 'active' && phaseRef.current === 'recording') void stop();
+      else if (next !== 'active' && phaseRef.current === 'preparing') void clear();
     });
     return () => subscription.remove();
-  }, [stop]);
+  }, [clear, stop]);
 
   return { phase, uri, error, permissionDenied, start, stop, clear,
     seconds: phase === 'recorded' ? recordedSeconds : phase === 'recording' ? Math.min(MAX_VOICE_SECONDS, Math.floor(state.durationMillis / 1000)) : 0,

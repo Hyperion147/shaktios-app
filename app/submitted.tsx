@@ -8,42 +8,25 @@ import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { PrimaryButton } from '@/src/components/design';
 import { ErrorState, LoadingState } from '@/src/components/States';
 import { fetchMyReport } from '@/src/api/reports';
-import { normalizeError } from '@/src/api/client';
+import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
-import type { CitizenReportRecord } from '@/src/types';
+import type { ApiError } from '@/src/types';
+
+const reportError = (error: ApiError) => `${error.message} Your report may already be stored. Check My Reports before submitting another.`;
 
 export default function SubmittedScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const [report, setReport] = React.useState<CitizenReportRecord | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const load = React.useCallback(async () => {
-    if (!id) {
-      setError('The submitted report id is missing.');
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setReport(await fetchMyReport(id));
-    } catch (e) {
-      setError(normalizeError(e).message);
-    } finally {
-      setLoading(false);
-    }
+  const readReport = React.useCallback((signal: AbortSignal) => {
+    if (typeof id !== 'string' || !id) return Promise.reject(new Error('The submitted report id is missing.'));
+    return fetchMyReport(id, signal);
   }, [id]);
-
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+  const { data: report, loading, error, reload: load } = useFocusedResource(readReport, reportError);
 
   if (loading)
     return (
       <ScreenContainer>
-        <LoadingState title="Saving your report…" />
+        <LoadingState title="Loading your stored report…" />
       </ScreenContainer>
     );
   if (error || !report) {
@@ -54,6 +37,7 @@ export default function SubmittedScreen() {
           message={error ?? 'Report is unavailable.'}
           onRetry={load}
         />
+        <PrimaryButton title="Check My Reports" onPress={() => router.replace('/(tabs)/reports')} />
       </ScreenContainer>
     );
   }

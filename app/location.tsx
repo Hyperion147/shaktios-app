@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { CheckCircle2, LocateFixed, MapPin } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -13,7 +13,7 @@ import { THEME } from '@/lib/theme';
 /** Optional device GPS evidence, not a decorative map or invented accuracy. */
 export default function LocationScreen() {
   const router = useRouter();
-  const { pendingLocation, setPendingLocation, draft } = useSession();
+  const { pendingLocation, setPendingLocation, draft, getDraftRevision } = useSession();
   const [state, setState] = React.useState<LocationState>(
     pendingLocation ? { status: 'ready', location: pendingLocation } : { status: 'idle' },
   );
@@ -21,27 +21,35 @@ export default function LocationScreen() {
   const inFlight = React.useRef(false);
   const mounted = React.useRef(true);
 
-  React.useEffect(() => {
+  const requestRevision = React.useRef(0);
+  useFocusEffect(React.useCallback(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
-  }, []);
+    setState({ status: 'idle' });
+    return () => { mounted.current = false; ++requestRevision.current; inFlight.current = false; };
+  }, []));
 
   const request = async () => {
     if (inFlight.current) return;
     inFlight.current = true;
+    const requestId = ++requestRevision.current;
+    const revision = getDraftRevision();
+    const current = () => mounted.current && requestId === requestRevision.current && revision === getDraftRevision();
     setState({ status: 'requesting' });
     try {
       const location = await captureLocation();
-      if (!mounted.current) return;
+      if (!current()) return;
       setPendingLocation(location);
       setState({ status: 'ready', location });
     } catch (error) {
-      if (!mounted.current) return;
+      if (!current()) return;
       const message = error instanceof Error ? error.message : 'Location unavailable.';
       setState({ status: message.toLowerCase().includes('denied') ? 'denied' : 'unavailable', message });
       setPendingLocation(null);
     } finally {
-      inFlight.current = false;
+      if (requestId === requestRevision.current) {
+        inFlight.current = false;
+        if (mounted.current) setState((value) => value.status === 'requesting' ? { status: 'idle' } : value);
+      }
     }
   };
 
@@ -78,7 +86,7 @@ export default function LocationScreen() {
         {'message' in state && <Text accessibilityRole="alert" className="text-[13px] text-destructive">{state.message} You can continue with your selected venue zone.</Text>}
         {linkError && <Text accessibilityRole="alert" className="text-[13px] text-destructive">{linkError}</Text>}
         {state.status === 'requesting' ? <View className="flex-row items-center gap-2 p-3"><ActivityIndicator color={THEME.light.primary} /><Text>Capturing GPS position…</Text></View> : <Pressable accessibilityRole="button" onPress={request} className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4"><LocateFixed size={18} color={THEME.light.primary} /><Text className="font-semibold text-primary">{loc ? 'Refresh GPS position' : 'Capture GPS position'}</Text></Pressable>}
-        {state.status === 'denied' && <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()}><Text className="text-center font-semibold text-primary">Open location settings</Text></Pressable>}
+        {state.status === 'denied' && Platform.OS !== 'web' && <Pressable accessibilityRole="button" className="min-h-12 justify-center" onPress={() => { void Linking.openSettings().catch(() => setLinkError('Open device settings to allow location access, or continue with your venue zone.')); }}><Text className="text-center font-semibold text-primary">Open location settings</Text></Pressable>}
         <PrimaryButton title={loc ? 'Continue with GPS' : 'Continue with zone only'} onPress={next} disabled={state.status === 'requesting' || !draft.zoneId} />
       </ScrollView>
     </ScreenContainer>

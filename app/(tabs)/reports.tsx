@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useFocusedResource } from '@/src/hooks/useFocusedResource';
 import { WifiOff } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,24 +45,9 @@ function authErrorMessage(error: ReturnType<typeof normalizeError>): string {
 
 export default function ReportsScreen() {
   const router = useRouter();
-  const [reports, setReports] = React.useState<CitizenReportRecord[] | null>(null);
   const [filter, setFilter] = React.useState<Filter>('all');
-  const [error, setError] = React.useState<string | null>(null);
-
-  const load = React.useCallback(async () => {
-    setError(null);
-    try {
-      setReports(await fetchMyReports(50, 0));
-    } catch (e) {
-      setError(authErrorMessage(normalizeError(e)));
-    }
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void load();
-    }, [load])
-  );
+  const readReports = React.useCallback((signal: AbortSignal) => fetchMyReports(50, 0, signal), []);
+  const { data: reports, error, reload: load } = useFocusedResource(readReports, authErrorMessage);
 
   const visible = (reports ?? []).filter((report) => {
     if (filter === 'all') return true;

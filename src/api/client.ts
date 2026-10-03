@@ -3,9 +3,13 @@ import { getAccessToken } from '@/src/api/supabase';
 import type { ApiError } from '@/src/types';
 
 let authToken: string | null = null;
+let authIdentity: string | null = null;
+let authRevision = 0;
 
-/** Manual override (kept for session restore); otherwise read from Supabase. */
-export function setAuthToken(token: string | null) {
+/** Session ownership changes invalidate pending reads/uploads, but token refresh does not. */
+export function setAuthToken(token: string | null, identity: string | null = token) {
+  if (identity !== authIdentity) ++authRevision;
+  authIdentity = identity;
   authToken = token;
 }
 
@@ -38,6 +42,10 @@ interface RequestOptions {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const revision = authRevision;
+  const assertCurrentSession = () => {
+    if (revision !== authRevision) throw new ApiErrorShape('The signed-in account changed. Please retry from the current account.', { code: 'cancelled' });
+  };
   const controller = new AbortController();
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
@@ -49,7 +57,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     // Prefer the live Supabase session so an automatic refresh is reflected
     // in API calls; the direct login token remains a fallback during the
     // SecureStore persistence race immediately after sign-in.
-    const token = options.token ?? (await getAccessToken()) ?? authToken;
+    const token = options.token !== undefined ? options.token : (await getAccessToken()) ?? authToken;
+    assertCurrentSession();
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       signal: controller.signal,
@@ -62,6 +71,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
 
     const text = await res.text();
+    assertCurrentSession();
     let data: T | undefined;
     try {
       data = text ? (JSON.parse(text) as T) : undefined;

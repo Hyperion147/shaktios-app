@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -29,21 +29,21 @@ function Row({ label, children, onEdit }: { label: string; children: React.React
 /** Review and submit one authenticated report. */
 export default function ReviewScreen() {
   const router = useRouter();
-  const { user, draft, activeEvent, pendingLocation, resetDraft } = useSession();
+  const { user, draft, activeEvent, pendingLocation, resetDraft, getDraftRevision } = useSession();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [confirmed, setConfirmed] = React.useState(false);
+  const [confirmedRevision, setConfirmedRevision] = React.useState<number | null>(null);
+  const confirmed = confirmedRevision !== null && confirmedRevision === getDraftRevision();
   const submittingRef = React.useRef(false);
   const mounted = React.useRef(true);
-  React.useEffect(() => {
+  useFocusEffect(React.useCallback(() => {
     mounted.current = true;
+    setConfirmedRevision(null);
     return () => { mounted.current = false; };
-  }, []);
-  React.useEffect(() => {
-    setConfirmed(false);
-  }, [draft, activeEvent?.id, pendingLocation]);
+  }, []));
   const validVenue = activeEvent && activeEvent.status !== 'ended' && activeEvent.zones.some((zone) => zone.id === draft.zoneId);
-  const canSubmit = Boolean(validVenue && (!draft.voice || confirmed));
+  const validDescription = draft.description.length <= 500 && (!(draft.voice || draft.category === 'other') || Boolean(draft.description.trim()));
+  const canSubmit = Boolean(user && validVenue && validDescription && (!draft.voice || confirmed));
 
   const categoryLabel =
     INCIDENT_CATEGORIES.find((item) => item.id === draft.category)?.label ?? draft.category;
@@ -59,10 +59,15 @@ export default function ReviewScreen() {
       setError('Select an active event and one of its registered venue zones before submitting.');
       return;
     }
+    if (!validDescription) {
+      setError('Review the description. Voice reports and Other require a description of at most 500 characters.');
+      return;
+    }
     if (draft.voice && !confirmed) {
       setError('Confirm that you reviewed the voice-filled report before submitting.');
       return;
     }
+    const revision = getDraftRevision();
     submittingRef.current = true;
     setBusy(true);
     setError(null);
@@ -78,11 +83,11 @@ export default function ReviewScreen() {
         eventId: activeEvent.id,
         urgency: draft.urgency,
       });
-      if (!mounted.current) return;
+      if (!mounted.current || revision !== getDraftRevision()) return;
       resetDraft();
       router.replace({ pathname: '/submitted', params: { id: event.id } });
     } catch (e) {
-      if (!mounted.current) return;
+      if (!mounted.current || revision !== getDraftRevision()) return;
       const err = normalizeError(e);
       setError(
         err.code === 'unauthorized'
@@ -91,7 +96,7 @@ export default function ReviewScreen() {
       );
     } finally {
       submittingRef.current = false;
-      if (mounted.current) setBusy(false);
+      setBusy(false);
     }
   };
 
@@ -134,7 +139,7 @@ export default function ReviewScreen() {
             <Text className="mt-1 text-[11px] text-muted-foreground">Language: {draft.voice.languageCode ?? 'Not identified'}. Only the report fields above are submitted; the raw recording and this reference transcript are not attached.</Text>
           </Row>
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: confirmed, disabled: busy }} disabled={busy}
-            onPress={() => setConfirmed((value) => !value)} className="flex-row items-start gap-3 rounded-2xl border border-border bg-card p-4">
+            onPress={() => setConfirmedRevision(confirmed ? null : getDraftRevision())} className="flex-row items-start gap-3 rounded-2xl border border-border bg-card p-4">
             <View className={`mt-0.5 size-6 items-center justify-center rounded-md border ${confirmed ? 'border-primary bg-primary' : 'border-border'}`}><Text className="font-bold text-white">{confirmed ? '✓' : ''}</Text></View>
             <Text className="flex-1 text-[13px] leading-5">I reviewed and corrected the category, description, venue zone, urgency and optional GPS. Submit these details as my report.</Text>
           </Pressable>

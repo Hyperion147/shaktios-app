@@ -29,7 +29,8 @@ export async function requestVoiceDraft(
     if (!uri.startsWith('blob:')) throw new Error('This recording is no longer available. Please record again.');
     const blob = await (await fetch(uri, { signal })).blob();
     if (!blob.size || blob.size > MAX_VOICE_BYTES) throw new Error('Record a short, non-empty clip under 25 seconds.');
-    body.append('audio', blob, 'voice.webm');
+    const extension = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+    body.append('audio', blob, `voice.${extension}`);
   } else {
     if (!uri.startsWith('file://')) throw new Error('This recording is no longer available. Please record again.');
     const file = new File(uri);

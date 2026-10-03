@@ -50,6 +50,8 @@ interface SessionState {
   validateEventId: (eventId: string) => Promise<VenueEvent | null>;
   setDraft: (patch: Partial<ReportDraft>) => void;
   resetDraft: () => void;
+  /** Capture before async work; invalidated by account, venue or draft changes. */
+  getDraftRevision: () => number;
   pendingLocation: ReportLocation | null;
   setPendingLocation: (loc: ReportLocation | null) => void;
 }
@@ -74,6 +76,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [draft, setDraftState] = React.useState<ReportDraft>(DEFAULT_DRAFT);
   const [pendingLocation, setPendingLocation] = React.useState<ReportLocation | null>(null);
   const userRef = React.useRef<User | null>(null);
+  const draftRevision = React.useRef(0);
+  const getDraftRevision = React.useCallback(() => draftRevision.current, []);
+  const updatePendingLocation = React.useCallback((loc: ReportLocation | null) => {
+    ++draftRevision.current;
+    setPendingLocation(loc);
+  }, []);
   const selectedIdRef = React.useRef<string | null>(null);
   const selectionRevision = React.useRef(0);
   const metadataRequest = React.useRef(0);
@@ -105,6 +113,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const event = await fetchVenue(id);
       if (!mountedRef.current || request !== metadataRequest.current || selectedIdRef.current !== id) return;
       setActiveEvent(event);
+      ++draftRevision.current;
       setDraftState((current) => {
         const zone = event.zones.find((item) => item.id === current.zoneId);
         return { ...current, zoneId: zone?.id ?? null, locationLabel: zone?.label ?? '' };
@@ -130,8 +139,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       userRef.current = session?.user ?? null;
       setUser(session?.user ?? null);
       setToken(session?.token ?? null);
-      setAuthToken(session?.token ?? null);
-      if (previousId && previousId !== session?.user.id) {
+      setAuthToken(session?.token ?? null, session?.user.id ?? null);
+      if (previousId !== session?.user.id) {
+        ++draftRevision.current;
         setDraftState(DEFAULT_DRAFT);
         setPendingLocation(null);
       }
@@ -189,24 +199,35 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // racing SecureStore immediately after successful login.
     const session = await apiSignIn(email, password);
     setSessionError(null);
+    if (userRef.current?.id !== session.user.id) {
+      ++draftRevision.current;
+      setDraftState(DEFAULT_DRAFT);
+      setPendingLocation(null);
+    }
     setUser(session.user);
     setToken(session.token);
     userRef.current = session.user;
-    setAuthToken(session.token);
+    setAuthToken(session.token, session.user.id);
   }, []);
 
   const signUp = React.useCallback(async (email: string, password: string) => {
     const session = await apiSignUp(email, password);
     setSessionError(null);
+    if (userRef.current?.id !== session.user.id) {
+      ++draftRevision.current;
+      setDraftState(DEFAULT_DRAFT);
+      setPendingLocation(null);
+    }
     setUser(session.user);
     setToken(session.token);
     userRef.current = session.user;
-    setAuthToken(session.token);
+    setAuthToken(session.token, session.user.id);
   }, []);
 
   const logout = React.useCallback(async () => {
     await apiSignOut();
-    setAuthToken(null);
+    setAuthToken(null, null);
+    ++draftRevision.current;
     userRef.current = null;
     setUser(null);
     setToken(null);
@@ -230,8 +251,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveEvent(event);
     setEventError(null);
     setEventLoading(false);
-    // A voice draft belongs to one venue; never reuse it for another event.
-    setDraftState((current) => current.voice ? DEFAULT_DRAFT : { ...current, zoneId: null, locationLabel: '' });
+    // Manual observations are venue-scoped too; never carry private details across venues.
+    ++draftRevision.current;
+    setDraftState(DEFAULT_DRAFT);
     setPendingLocation(null);
     persistSelection(event.id);
   }, [persistSelection]);
@@ -243,24 +265,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveEvent(null);
     setEventError(null);
     setEventLoading(false);
-    setDraftState((current) => current.voice ? DEFAULT_DRAFT : { ...current, zoneId: null, locationLabel: '' });
+    ++draftRevision.current;
+    setDraftState(DEFAULT_DRAFT);
     setPendingLocation(null);
     persistSelection(null);
   }, [persistSelection]);
 
-  const setDraft = React.useCallback(
-    (patch: Partial<ReportDraft>) => setDraftState((current) => ({ ...current, ...patch })), []);
+  const setDraft = React.useCallback((patch: Partial<ReportDraft>) => {
+    ++draftRevision.current;
+    setDraftState((current) => ({ ...current, ...patch }));
+  }, []);
 
   const resetDraft = React.useCallback(() => {
+    ++draftRevision.current;
     setDraftState(DEFAULT_DRAFT);
     setPendingLocation(null);
   }, []);
 
   const value = React.useMemo(() => ({
     initializing, sessionError, user, token, activeEvent, eventLoading, eventError, refreshEvent,
-    draft, pendingLocation, setPendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft,
+    draft, pendingLocation, setPendingLocation: updatePendingLocation, getDraftRevision, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft,
   }), [initializing, sessionError, user, token, activeEvent, eventLoading, eventError, refreshEvent,
-    draft, pendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft]);
+    draft, pendingLocation, updatePendingLocation, getDraftRevision, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
