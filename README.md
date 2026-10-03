@@ -53,7 +53,7 @@ For the Android emulator, verify the API from the emulator with `adb shell curl 
 - Email/password login and account creation use Supabase Auth. Email confirmation, if enabled in your project, is required before sign-in. No phone/Google login is advertised without an integration.
 - Venue browsing, manual ID entry and QR/deep-link joining resolve `/venues` records. No mock venue or default event is selected. Native selection is persisted with SecureStore; metadata is fetched again from the API.
 - Reports require a chosen venue and canonical zone. GPS is optional; the location screen displays device coordinates and links to their actual map position instead of displaying a made-up street map.
-- `GET /me/reports` and `/me/reports/{id}` return only the authenticated citizen's reports. Status is derived from operator incident state, never a report-ID hash. Report lists refresh on focus/pull-to-refresh and support loading more records.
+- `GET /me/reports` and `/me/reports/{id}` return only the authenticated citizen's reports. Status is derived from operator incident state, never a report-ID hash. My Reports reloads the latest 50 records on screen focus. The API supports ownership-filtered limit/offset pagination, but a load-more/pull-to-refresh history UI is not yet implemented.
 - Submission confirmation and detail screens fetch the stored report ID. No fake attachments, contacts, profile stats or historical timestamps are shown. Photo upload, push notifications and emergency dispatch are not implemented or claimed.
 - A backend `401` is shown as an actionable error, not an immediate forced logout while a Supabase session remains valid.
 

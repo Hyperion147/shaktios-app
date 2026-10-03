@@ -7,6 +7,7 @@ import { normalizeError, setAuthToken } from '@/src/api/client';
 import { getSupabase } from '@/src/api/supabase';
 import { isSupabaseConfigured } from '@/src/constants/config';
 import type { ReportLocation, User, VenueEvent, IncidentCategoryId } from '@/src/types';
+import type { VoiceProvenance } from '@/src/types/voice';
 
 const SELECTED_VENUE_KEY = 'shaktios.selectedVenueId';
 let webVenueId: string | null = null;
@@ -27,6 +28,8 @@ interface ReportDraft {
   zoneId: string | null;
   locationLabel: string;
   urgency: 'low' | 'medium' | 'high';
+  /** Transient review context; never persisted as a recording or raw transcript. */
+  voice: VoiceProvenance | null;
 }
 
 interface SessionState {
@@ -46,13 +49,14 @@ interface SessionState {
   leaveEvent: () => void;
   validateEventId: (eventId: string) => Promise<VenueEvent | null>;
   setDraft: (patch: Partial<ReportDraft>) => void;
+  resetDraft: () => void;
   pendingLocation: ReportLocation | null;
   setPendingLocation: (loc: ReportLocation | null) => void;
 }
 
 const SessionContext = React.createContext<SessionState | null>(null);
 const DEFAULT_DRAFT: ReportDraft = {
-  category: 'crowd', description: '', zoneId: null, locationLabel: '', urgency: 'medium',
+  category: 'crowd', description: '', zoneId: null, locationLabel: '', urgency: 'medium', voice: null,
 };
 
 function toUser(id: string, email: string | null): User {
@@ -226,8 +230,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveEvent(event);
     setEventError(null);
     setEventLoading(false);
-    // Do not guess a report's location: the citizen explicitly selects a zone.
-    setDraftState((current) => ({ ...current, zoneId: null, locationLabel: '' }));
+    // A voice draft belongs to one venue; never reuse it for another event.
+    setDraftState((current) => current.voice ? DEFAULT_DRAFT : { ...current, zoneId: null, locationLabel: '' });
     setPendingLocation(null);
     persistSelection(event.id);
   }, [persistSelection]);
@@ -239,7 +243,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveEvent(null);
     setEventError(null);
     setEventLoading(false);
-    setDraftState((current) => ({ ...current, zoneId: null, locationLabel: '' }));
+    setDraftState((current) => current.voice ? DEFAULT_DRAFT : { ...current, zoneId: null, locationLabel: '' });
     setPendingLocation(null);
     persistSelection(null);
   }, [persistSelection]);
@@ -247,11 +251,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const setDraft = React.useCallback(
     (patch: Partial<ReportDraft>) => setDraftState((current) => ({ ...current, ...patch })), []);
 
+  const resetDraft = React.useCallback(() => {
+    setDraftState(DEFAULT_DRAFT);
+    setPendingLocation(null);
+  }, []);
+
   const value = React.useMemo(() => ({
     initializing, sessionError, user, token, activeEvent, eventLoading, eventError, refreshEvent,
-    draft, pendingLocation, setPendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft,
+    draft, pendingLocation, setPendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft,
   }), [initializing, sessionError, user, token, activeEvent, eventLoading, eventError, refreshEvent,
-    draft, pendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft]);
+    draft, pendingLocation, login, signUp, logout, joinEvent, leaveEvent, validateEventId, setDraft, resetDraft]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

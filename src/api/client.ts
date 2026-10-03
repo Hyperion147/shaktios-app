@@ -34,11 +34,16 @@ interface RequestOptions {
   body?: unknown;
   token?: string | null;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  const cancel = () => controller.abort();
+  if (options.signal?.aborted) cancel();
+  else options.signal?.addEventListener('abort', cancel, { once: true });
+  const timeout = setTimeout(cancel, options.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  const multipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   try {
     // Prefer the live Supabase session so an automatic refresh is reflected
@@ -49,10 +54,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       method: options.method ?? 'GET',
       signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
+        // Let fetch set the multipart boundary for native/web audio uploads.
+        ...(!multipart ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      ...(options.body !== undefined ? { body: multipart ? options.body as FormData : JSON.stringify(options.body) } : {}),
     });
 
     const text = await res.text();
@@ -81,13 +87,16 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return data as T;
   } catch (error) {
     if (error instanceof ApiErrorShape) throw error;
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiErrorShape('Request timed out. Please try again.', { code: 'timeout' });
+    if (controller.signal.aborted) {
+      throw new ApiErrorShape(options.signal?.aborted ? 'Request cancelled.' : 'Request timed out. Please try again.', {
+        code: options.signal?.aborted ? 'cancelled' : 'timeout',
+      });
     }
     throw new ApiErrorShape('Unable to reach the ShaktiOS server. Please try again.', {
       code: 'network',
     });
   } finally {
     clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', cancel);
   }
 }

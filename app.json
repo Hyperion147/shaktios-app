@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "shaktios-app",
+    "name": "ShaktiOS",
     "slug": "shaktios-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "shaktios-app",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -16,7 +16,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#6468F0",
+        "monochromeImage": "./assets/images/adaptive-icon.png"
       }
     },
     "web": {
@@ -26,28 +27,43 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
+      ["expo-secure-store", { "faceIDPermission": false }],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow ShaktiOS to scan event QR codes."
+          "cameraPermission": "Allow ShaktiOS to scan event QR codes.",
+          "recordAudioAndroid": false,
+          "microphonePermission": "Allow ShaktiOS to record an optional voice report."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow ShaktiOS to attach your location to incident reports."
+          "locationWhenInUsePermission": "Allow ShaktiOS to attach your location to incident reports.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false
         }
       ],
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash.png",
+          "imageWidth": 96,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#F6F7F9"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ShaktiOS to record an optional voice report.",
+          "recordAudioAndroid": true,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ]
     ],
     "extra": {
       "apiUrl": "http://10.0.2.2:8000"

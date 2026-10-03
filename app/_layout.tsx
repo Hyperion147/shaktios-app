@@ -27,6 +27,7 @@ function SessionStack() {
       <Stack.Protected guard={Boolean(user)}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="report" />
+        <Stack.Screen name="voice-report" />
         <Stack.Screen name="report-details" />
         <Stack.Screen name="location" />
         <Stack.Screen name="review" />

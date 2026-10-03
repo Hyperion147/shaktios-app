@@ -8,7 +8,6 @@ import {
   HeartPulse,
   HelpCircle,
   Info,
-  ShieldCheck,
   UserSearch,
   Users,
   Wrench,
@@ -26,15 +25,7 @@ const INK = THEME.light.foreground;
 
 /* ---------------- Brand logo ---------------- */
 
-export function ShaktiLogo({ size = 84 }: { size?: number }) {
-  return (
-    <View
-      style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: BRAND }}
-      className="items-center justify-center">
-      <ShieldCheck color="#fff" size={size * 0.55} strokeWidth={2.2} />
-    </View>
-  );
-}
+export { ShaktiLogo } from './shakti-logo';
 
 /* ---------------- Headers ---------------- */
 

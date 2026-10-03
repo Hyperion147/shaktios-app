@@ -13,10 +13,10 @@ export interface SubmitReportInput {
   longitude?: number | null;
   accuracy?: number | null;
   eventId: string;
-  urgency?: 'normal' | 'high';
+  urgency?: 'normal' | 'low' | 'medium' | 'high';
 }
 
-const URGENCY_CONFIDENCE = { normal: 0.7, high: 0.9 } as const;
+const URGENCY_CONFIDENCE = { normal: 0.7, low: 0.7, medium: 0.7, high: 0.9 } as const;
 
 /** Submit one authenticated citizen observation to the backend. */
 export async function submitReport(input: SubmitReportInput): Promise<BackendEvent> {

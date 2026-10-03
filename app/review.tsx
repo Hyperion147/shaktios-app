@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -14,12 +14,13 @@ import { normalizeError } from '@/src/api/client';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
 import { formatCoords } from '@/src/utils/location';
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, onEdit }: { label: string; children: React.ReactNode; onEdit?: () => void }) {
   return (
     <Card className="gap-1 rounded-2xl p-4">
-      <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </Text>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</Text>
+        {onEdit && <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${label.toLowerCase()}`} onPress={onEdit} className="min-h-11 justify-center px-2"><Text className="text-[12px] font-bold text-primary">Edit</Text></Pressable>}
+      </View>
       {children}
     </Card>
   );
@@ -28,10 +29,21 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 /** Review and submit one authenticated report. */
 export default function ReviewScreen() {
   const router = useRouter();
-  const { user, draft, activeEvent, pendingLocation, setDraft, setPendingLocation } = useSession();
+  const { user, draft, activeEvent, pendingLocation, resetDraft } = useSession();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [confirmed, setConfirmed] = React.useState(false);
   const submittingRef = React.useRef(false);
+  const mounted = React.useRef(true);
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  React.useEffect(() => {
+    setConfirmed(false);
+  }, [draft, activeEvent?.id, pendingLocation]);
+  const validVenue = activeEvent && activeEvent.status !== 'ended' && activeEvent.zones.some((zone) => zone.id === draft.zoneId);
+  const canSubmit = Boolean(validVenue && (!draft.voice || confirmed));
 
   const categoryLabel =
     INCIDENT_CATEGORIES.find((item) => item.id === draft.category)?.label ?? draft.category;
@@ -43,8 +55,12 @@ export default function ReviewScreen() {
       setError('You must be signed in to submit a citizen report.');
       return;
     }
-    if (!activeEvent || !draft.zoneId) {
-      setError('Select an event and venue zone before submitting.');
+    if (!activeEvent || !draft.zoneId || !validVenue) {
+      setError('Select an active event and one of its registered venue zones before submitting.');
+      return;
+    }
+    if (draft.voice && !confirmed) {
+      setError('Confirm that you reviewed the voice-filled report before submitting.');
       return;
     }
     submittingRef.current = true;
@@ -60,12 +76,13 @@ export default function ReviewScreen() {
         longitude: pendingLocation?.longitude ?? null,
         accuracy: pendingLocation?.accuracy ?? null,
         eventId: activeEvent.id,
-        urgency: draft.urgency === 'high' ? 'high' : 'normal',
+        urgency: draft.urgency,
       });
-      setDraft({ description: '' });
-      setPendingLocation(null);
+      if (!mounted.current) return;
+      resetDraft();
       router.replace({ pathname: '/submitted', params: { id: event.id } });
     } catch (e) {
+      if (!mounted.current) return;
       const err = normalizeError(e);
       setError(
         err.code === 'unauthorized'
@@ -74,7 +91,7 @@ export default function ReviewScreen() {
       );
     } finally {
       submittingRef.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 
@@ -88,15 +105,15 @@ export default function ReviewScreen() {
         <Row label="Event">
           <Text className="text-[14px] font-bold">{activeEvent?.name ?? '—'}</Text>
         </Row>
-        <Row label="Category">
+        <Row label="Category" onEdit={busy ? undefined : () => router.push('/report')}>
           <Text className="text-[14px] font-bold">{categoryLabel}</Text>
         </Row>
-        <Row label="Description">
+        <Row label="Description" onEdit={busy ? undefined : () => router.push('/report-details')}>
           <Text className="text-[13px] leading-5">
             {draft.description || 'No description provided.'}
           </Text>
         </Row>
-        <Row label="Venue zone">
+        <Row label="Venue zone" onEdit={busy ? undefined : () => router.push('/report-details')}>
           <Text className="text-[14px] font-bold">{draft.locationLabel || '—'}</Text>
           <Text variant="muted" className="text-[12px]">
             Canonical zone id: {draft.zoneId || '—'}
@@ -107,9 +124,21 @@ export default function ReviewScreen() {
               : 'Area zone selected — no GPS attached'}
           </Text>
         </Row>
-        <Row label="Urgency">
+        <Row label="Urgency" onEdit={busy ? undefined : () => router.push('/report-details')}>
           <Text className="text-[14px] font-bold">{urgencyLabel}</Text>
         </Row>
+        <PrimaryButton title="Edit optional GPS" variant="outline" disabled={busy} onPress={() => router.push('/location')} />
+        {draft.voice && <>
+          <Row label="Voice transcript — reference only">
+            <Text selectable className="text-[13px] leading-5">{draft.voice.transcript}</Text>
+            <Text className="mt-1 text-[11px] text-muted-foreground">Language: {draft.voice.languageCode ?? 'Not identified'}. Only the report fields above are submitted; the raw recording and this reference transcript are not attached.</Text>
+          </Row>
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: confirmed, disabled: busy }} disabled={busy}
+            onPress={() => setConfirmed((value) => !value)} className="flex-row items-start gap-3 rounded-2xl border border-border bg-card p-4">
+            <View className={`mt-0.5 size-6 items-center justify-center rounded-md border ${confirmed ? 'border-primary bg-primary' : 'border-border'}`}><Text className="font-bold text-white">{confirmed ? '✓' : ''}</Text></View>
+            <Text className="flex-1 text-[13px] leading-5">I reviewed and corrected the category, description, venue zone, urgency and optional GPS. Submit these details as my report.</Text>
+          </Pressable>
+        </>}
 
         {error ? (
           <View className="gap-3">
@@ -117,7 +146,7 @@ export default function ReviewScreen() {
               <AlertTitle>Couldn’t submit report</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-            <Button onPress={submit} disabled={busy} className="h-14 w-full rounded-2xl">
+            <Button onPress={submit} disabled={busy || !canSubmit} className="h-14 w-full rounded-2xl">
               <Text className="text-[15px] font-bold">
                 {busy ? 'Sending report…' : 'Try Again'}
               </Text>
@@ -128,6 +157,7 @@ export default function ReviewScreen() {
             title={busy ? 'Sending report…' : 'Submit Report'}
             onPress={submit}
             loading={busy}
+            disabled={!canSubmit}
           />
         )}
       </ScrollView>
