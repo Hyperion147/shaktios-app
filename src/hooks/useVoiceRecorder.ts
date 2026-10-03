@@ -17,11 +17,12 @@ export function useVoiceRecorder() {
   const [uri, setUri] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = React.useState(false);
+  const [recordedSeconds, setRecordedSeconds] = React.useState(0);
+  const startedAt = React.useRef(0);
   const focused = React.useRef(false);
   const generation = React.useRef(0);
   const phaseRef = React.useRef<Phase>('idle');
   const uriRef = React.useRef<string | null>(null);
-  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const acceptStatus = React.useRef(false);
   const statusHandler = React.useRef<(status: RecordingStatus) => void>(() => {});
   const recorder = useAudioRecorder(OPTIONS, (status) => statusHandler.current(status));
@@ -31,10 +32,6 @@ export function useVoiceRecorder() {
     phaseRef.current = next;
     if (focused.current) setPhase(next);
   }, []);
-  const clearTimer = React.useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  }, []);
   const restoreAudio = React.useCallback(async () => {
     try { await setAudioModeAsync({ allowsRecording: false, shouldPlayInBackground: false }); }
     catch { /* No private device/provider errors are logged. */ }
@@ -43,7 +40,6 @@ export function useVoiceRecorder() {
   const clear = React.useCallback(async () => {
     const revision = ++generation.current;
     acceptStatus.current = false;
-    clearTimer();
     updatePhase('stopping');
     const previousUri = uriRef.current;
     uriRef.current = null;
@@ -55,12 +51,12 @@ export function useVoiceRecorder() {
     discardRecording(previousUri);
     await restoreAudio();
     if (revision === generation.current) updatePhase('idle');
-  }, [clearTimer, recorder, restoreAudio, updatePhase]);
+  }, [recorder, restoreAudio, updatePhase]);
 
   const stop = React.useCallback(async () => {
     if (phaseRef.current !== 'recording') return;
     const revision = generation.current;
-    clearTimer();
+    setRecordedSeconds(Math.min(MAX_VOICE_SECONDS, Math.round((Date.now() - startedAt.current) / 1000)));
     updatePhase('stopping');
     try {
       await recorder.stop();
@@ -74,32 +70,35 @@ export function useVoiceRecorder() {
       setUri(recordedUri);
       updatePhase('recorded');
     } catch {
+      // The duration limit can start flushing at the same instant as a manual
+      // stop. Let its completion callback finish rather than discarding the clip.
+      if (acceptStatus.current && Date.now() - startedAt.current >= MAX_VOICE_SECONDS * 1000) return;
       if (focused.current && revision === generation.current) {
         setError('The recording could not be saved. Try again or use the manual form.');
         updatePhase('idle');
       }
     } finally { await restoreAudio(); }
-  }, [clearTimer, recorder, restoreAudio, updatePhase]);
+  }, [recorder, restoreAudio, updatePhase]);
 
   React.useEffect(() => {
     statusHandler.current = (status) => {
-      if (!focused.current || !acceptStatus.current || !['recording', 'stopping'].includes(phaseRef.current)) return;
+      if (!focused.current || !acceptStatus.current || !['recording', 'stopping'].includes(phaseRef.current)) {
+        if (status.isFinished && status.url) discardRecording(status.url);
+        return;
+      }
       if (status.hasError) {
-        clearTimer();
         setError('Audio recording was interrupted. Please record again or use the manual form.');
         void clear();
       } else if (status.isFinished && status.url) {
         acceptStatus.current = false;
-        clearTimer();
         uriRef.current = status.url;
         setUri(status.url);
-        if (phaseRef.current !== 'stopping') {
-          updatePhase('recorded');
-          void restoreAudio();
-        }
+        setRecordedSeconds(Math.min(MAX_VOICE_SECONDS, Math.round((Date.now() - startedAt.current) / 1000)));
+        updatePhase('recorded');
+        void restoreAudio();
       }
     };
-  }, [clear, clearTimer, restoreAudio, updatePhase]);
+  }, [clear, restoreAudio, updatePhase]);
 
   const start = React.useCallback(async () => {
     if (['preparing', 'recording', 'stopping'].includes(phaseRef.current)) return;
@@ -124,17 +123,18 @@ export function useVoiceRecorder() {
       if (!focused.current || revision !== generation.current) { await clear(); return; }
       if (AppState.currentState === 'background') { await clear(); return; }
       acceptStatus.current = true;
+      startedAt.current = Date.now();
+      // One duration owner: a second JS stop timer races the recorder's own
+      // automatic stop and can discard the finished clip on web/native.
       recorder.record({ forDuration: MAX_VOICE_SECONDS });
       updatePhase('recording');
-      // Native duration plus a foreground timer: never intentionally exceed the REST limit.
-      timer.current = setTimeout(() => { void stop(); }, MAX_VOICE_SECONDS * 1000);
     } catch {
       if (focused.current && revision === generation.current) {
         setError('Could not start the microphone. On web use HTTPS or localhost; on a device check microphone permission.');
       }
       await clear();
     }
-  }, [clear, recorder, restoreAudio, stop, updatePhase]);
+  }, [clear, recorder, restoreAudio, updatePhase]);
 
   useFocusEffect(React.useCallback(() => {
     focused.current = true;
@@ -153,6 +153,6 @@ export function useVoiceRecorder() {
   }, [stop]);
 
   return { phase, uri, error, permissionDenied, start, stop, clear,
-    seconds: Math.min(MAX_VOICE_SECONDS, Math.floor(state.durationMillis / 1000)),
+    seconds: phase === 'recorded' ? recordedSeconds : phase === 'recording' ? Math.min(MAX_VOICE_SECONDS, Math.floor(state.durationMillis / 1000)) : 0,
     busy: phase === 'preparing' || phase === 'stopping' };
 }

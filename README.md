@@ -1,12 +1,8 @@
 # ShaktiOS Citizen App
 
-This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
+The ShaktiOS citizen client uses [React Native](https://reactnative.dev/), [Expo](https://expo.dev/), and [React Native Reusables](https://reactnativereusables.com). Citizens join registered venues and submit human-reviewed reports through FastAPI, with either the manual form or optional Sarvam-assisted voice input.
 
-It was initialized using the following command, then the `Minimal (Nativewind)` template was selected when prompted:
-
-```bash
-npx @react-native-reusables/cli@latest init
-```
+Start with [MVP build readiness](BUILD_READINESS.md) for the current structure, checks, EAS profiles, remaining release configuration, and device acceptance checklist. Shared brand artwork is documented in [assets/BRAND.md](assets/BRAND.md).
 
 ## Getting Started
 
@@ -28,7 +24,7 @@ This will start the Expo Dev Server. Open the app in:
 - **Android**: press `a` to launch in the Android emulator
 - **Web**: press `w` to run in a browser
 
-You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
+You can also use a matching SDK 56 [Expo Go](https://expo.dev/go) client for development. Android/web bundling is verified; native sign-in, microphone/camera/GPS permissions and real Sarvam processing still require the device smoke test. Rebuild an existing development/release binary after adding native modules or changing permission plugins.
 
 ## Configuration (ShaktiOS citizen app)
 
@@ -57,6 +53,18 @@ For the Android emulator, verify the API from the emulator with `adb shell curl 
 - Submission confirmation and detail screens fetch the stored report ID. No fake attachments, contacts, profile stats or historical timestamps are shown. Photo upload, push notifications and emergency dispatch are not implemented or claimed.
 - A backend `401` is shown as an actionable error, not an immediate forced logout while a Supabase session remains valid.
 
+## Optional voice reporting
+
+1. Join a registered venue, then open **Report Incident → Describe by voice**. Manual category/details/location reporting remains available.
+2. Choose Auto detect or a supported language, record up to **25 seconds**, and optionally play it back. Permission is requested only when starting a recording. Backgrounding stops an active recording; leaving/discarding cleans up temporary audio.
+3. Explicitly consent to sending audio/transcript to Sarvam, then tap **Process voice & preview**. Recording alone never uploads or submits a report.
+4. Review the original transcript and edit the proposed category, description, registered zone and urgency. Unknown/ambiguous fields stay unselected. No GPS or identity is invented.
+5. Accept the edited draft, optionally capture GPS, then inspect the complete **Review Report** screen and tick its confirmation before **Submit Report**. Only the final report fields are saved—not raw audio or the reference transcript.
+
+Supported speech: **22 Indic languages plus English**, based on Sarvam's current model documentation. This is not a promise of every Indian language or perfect noisy/codemixed recognition; the interface itself remains English. Speech and field suggestions are input assistance, not risk scoring or emergency dispatch.
+
+Configure `SARVAM_API_KEY` **only on the FastAPI server**, never in Expo public environment variables. The app checks `/voice/config`; an absent key or unavailable API shows setup/manual-entry guidance rather than fake transcription. Adding the server key later does not require changing this client. See [complete voice setup and API contract](../shakti-os/docs/VOICE_REPORTING.md).
+
 ### End-to-end smoke test
 
 1. Start FastAPI on port 8000, apply Supabase migrations and run `shakti-os/scripts/seed_supabase.py --apply`. Seed venues are labelled scenarios, not real emergency registrations.
@@ -66,7 +74,7 @@ For the Android emulator, verify the API from the emulator with `adb shell curl 
 5. Reload the app: verify auth and selected venue restoration. Sign out, sign in as a different citizen and verify the first account's reports are not visible.
 6. Disable the API temporarily: screens must show retry/error states, not fabricated rows or a login loop.
 
-Checks: `pnpm exec tsc --noEmit` and `pnpm exec expo export --platform android`. Bundling is not proof of on-device login, camera/GPS permissions, or delivery to an external responder.
+Checks: `pnpm run check-types`, `pnpm test`, `pnpm exec expo install --check`, and Android/web exports. The 12 local tests cover draft validation, multipart transport, confirmation boundaries and native permission configuration. `tests/voice.browser.cjs` exercises exported web UI with synthetic sessions/API data and Chromium's fake microphone; it never contacts real providers. Bundling and mocked checks are not proof of on-device login, microphone/camera/GPS permissions, real Sarvam transcription, or responder delivery.
 
 ## Adding components
 

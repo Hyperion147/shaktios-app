@@ -7,7 +7,11 @@ import { MAX_VOICE_BYTES, MAX_VOICE_SECONDS, parseVoiceDraft } from '../utils/vo
 
 export async function fetchVoiceConfig(signal?: AbortSignal): Promise<VoiceConfig> {
   const config = await apiRequest<VoiceConfig>('/voice/config', { signal });
-  if (config.provider !== 'sarvam' || typeof config.configured !== 'boolean' || !Array.isArray(config.languages)) {
+  if (!config || config.provider !== 'sarvam' || typeof config.configured !== 'boolean'
+    || !Number.isFinite(config.max_audio_seconds) || config.max_audio_seconds <= 0
+    || !Number.isFinite(config.max_audio_bytes) || config.max_audio_bytes <= 0
+    || !Array.isArray(config.languages) || !config.languages.length
+    || !config.languages.every((language) => language && typeof language.code === 'string' && typeof language.label === 'string')) {
     throw new Error('Voice service configuration is unavailable. Please use the manual form.');
   }
   return { ...config, max_audio_seconds: Math.min(config.max_audio_seconds, MAX_VOICE_SECONDS), max_audio_bytes: Math.min(config.max_audio_bytes, MAX_VOICE_BYTES) };
@@ -33,7 +37,7 @@ export async function requestVoiceDraft(
     // React Native's fetch accepts a file descriptor; browsers use Blob above.
     body.append('audio', { uri, name: 'voice.m4a', type: 'audio/mp4' } as unknown as Blob);
   }
-  const result = await apiRequest<unknown>('/voice/draft', { method: 'POST', body, signal, timeoutMs: 90_000 });
+  const result = await apiRequest<unknown>('/voice/draft', { method: 'POST', body, signal, timeoutMs: 100_000 });
   return parseVoiceDraft(result, venue);
 }
 

@@ -27,7 +27,12 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-secure-store", { "faceIDPermission": false }],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-camera",
         {
@@ -63,7 +68,8 @@
           "enableBackgroundRecording": false,
           "enableBackgroundPlayback": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "apiUrl": "http://10.0.2.2:8000"

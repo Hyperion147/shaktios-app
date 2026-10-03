@@ -58,6 +58,9 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
   const [processing, setProcessing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<VoiceDraft | null>(null);
+  const scroll = React.useRef<ScrollView>(null);
+  const showingPreview = preview !== null;
+  React.useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [showingPreview]);
   const mounted = React.useRef(true);
   const configRequest = React.useRef<AbortController | null>(null);
   const draftRequest = React.useRef<AbortController | null>(null);
@@ -137,7 +140,7 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
     <View className="px-5"><ScreenHeader title="Report by voice" onBack={() => router.back()} />
       <Stepper steps={['Voice', 'Preview', 'Location', 'Review']} current={preview ? 1 : 0} />
     </View>
-    <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-8" keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scroll} className="flex-1 px-5" contentContainerClassName="gap-4 pb-8" keyboardShouldPersistTaps="handled">
       {preview ? <VoiceDraftPreview draft={preview} venue={venue}
         onChange={(patch) => setPreview((current) => current ? { ...current, fields: { ...current.fields, ...patch } } : null)}
         onAccept={accept} onDiscard={() => { setPreview(null); setConsent(false); setError(null); }} /> : <>
@@ -186,7 +189,7 @@ function VoiceCapture({ venue }: { venue: VenueEvent }) {
           <PrimaryButton title="Process voice & preview" loading={processing} disabled={!consent || unavailable || recording.busy}
             onPress={() => { void processAudio(); }} />
           {processing && <>
-            <Text accessibilityLiveRegion="polite" className="text-center text-[12px] text-muted-foreground">Transcribing speech and preparing suggestions… this may take up to a minute. No report is being submitted.</Text>
+            <Text accessibilityLiveRegion="polite" className="text-center text-[12px] text-muted-foreground">Transcribing speech and preparing suggestions… this may take a minute or longer. No report is being submitted.</Text>
             <PrimaryButton title="Cancel processing" variant="outline" onPress={cancelProcessing} />
           </>}
           {!processing && <PrimaryButton title="Discard recording" variant="ghost" onPress={() => { setConsent(false); void recording.clear(); }} />}

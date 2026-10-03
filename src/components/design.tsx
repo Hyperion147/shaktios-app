@@ -43,6 +43,7 @@ export function ScreenHeader({
       {onBack ? (
         <Pressable
           onPress={onBack}
+          accessibilityRole="button"
           accessibilityLabel="Go back"
           className="rounded-full p-1.5 active:opacity-60">
           <ChevronLeft size={24} color={INK} />
