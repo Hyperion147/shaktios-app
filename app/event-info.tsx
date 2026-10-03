@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Building2, CalendarDays, Headset, MapPin, ShieldAlert } from 'lucide-react-native';
+import { Building2, CalendarDays, Headset, MapPin } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import {
   AlertDialog,
@@ -14,17 +14,31 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
+import { EmptyState } from '@/src/components/States';
 import { ScreenHeader } from '@/src/components/design';
+import { VenueState } from '@/src/components/VenueState';
 import { useSession } from '@/src/store/session';
-import { ACTIVE_EVENT } from '@/src/constants/config';
 import { THEME } from '@/lib/theme';
 
-/** Screen 17 — Event Information with about + emergency contacts + leave. */
+function dates(startTime: string | null, endTime: string | null): string | null {
+  const format = (value: string | null) =>
+    value
+      ? new Date(value).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : null;
+  const start = format(startTime);
+  const end = format(endTime);
+  return start && end ? `${start} – ${end}` : (start ?? end);
+}
+
+/** Event information from the currently selected server venue. */
 export default function EventInfoScreen() {
   const router = useRouter();
   const { activeEvent, leaveEvent } = useSession();
   const [confirmLeave, setConfirmLeave] = React.useState(false);
-  const name = activeEvent?.name ?? 'TechFest 2025';
 
   const doLeave = () => {
     leaveEvent();
@@ -37,84 +51,107 @@ export default function EventInfoScreen() {
       <View className="px-5">
         <ScreenHeader title="Event Information" onBack={() => router.back()} />
       </View>
-      <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-8">
-        <View className="h-44 items-center justify-center gap-1 overflow-hidden rounded-3xl bg-[#3B3B6B]">
-          <Building2 size={52} color="#fff" />
-          <Text className="text-[11px] text-white/80">Main venue · Evening view</Text>
+      <View className="px-5"><VenueState /></View>
+      {!activeEvent ? (
+        <View className="flex-1 px-5 pt-4">
+          <EmptyState
+            title="No event selected"
+            subtitle="Join an event to see its venue information."
+            action={
+              <Pressable
+                onPress={() => router.push('/(tabs)/scan')}
+                className="mt-2 rounded-2xl bg-primary px-6 py-3">
+                <Text className="font-bold text-primary-foreground">Join an event</Text>
+              </Pressable>
+            }
+          />
         </View>
-
-        <View>
-          <Text className="text-[17px] font-extrabold">{name}</Text>
-          <View className="mt-1 flex-row items-center gap-1.5">
-            <MapPin size={13} color={THEME.light.mutedForeground} />
-            <Text variant="muted" className="text-[12px]">
-              {ACTIVE_EVENT.venue}
-            </Text>
+      ) : (
+        <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-8">
+          <View className="h-44 items-center justify-center gap-1 overflow-hidden rounded-3xl bg-[#3B3B6B]">
+            <Building2 size={52} color="#fff" />
+            <Text className="text-[11px] text-white/80">{activeEvent.venue}</Text>
           </View>
-          <View className="mt-0.5 flex-row items-center gap-1.5">
-            <CalendarDays size={13} color={THEME.light.mutedForeground} />
-            <Text variant="muted" className="text-[12px]">
-              {ACTIVE_EVENT.dates}
-            </Text>
-          </View>
-        </View>
 
-        <View className="gap-1.5">
-          <Text className="text-[14px] font-bold">About</Text>
-          <Text className="text-[13px] leading-5 text-muted-foreground">{ACTIVE_EVENT.about}</Text>
-        </View>
-
-        <View className="gap-2">
-          <Text className="text-[14px] font-bold">Emergency Contacts</Text>
-          <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
-            <View className="rounded-full bg-[#EEEDFF] p-2">
-              <Headset size={18} color={THEME.light.primary} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-[13px] font-semibold">Event Helpline</Text>
+          <View>
+            <Text className="text-[17px] font-extrabold">{activeEvent.name}</Text>
+            <View className="mt-1 flex-row items-center gap-1.5">
+              <MapPin size={13} color={THEME.light.mutedForeground} />
               <Text variant="muted" className="text-[12px]">
-                24×7 on-ground support
+                {activeEvent.venue}
               </Text>
             </View>
-            <Text className="text-[13px] font-bold">+91 98765 43210</Text>
+            {dates(activeEvent.startTime, activeEvent.endTime) ? (
+              <View className="mt-0.5 flex-row items-center gap-1.5">
+                <CalendarDays size={13} color={THEME.light.mutedForeground} />
+                <Text variant="muted" className="text-[12px]">
+                  {dates(activeEvent.startTime, activeEvent.endTime)}
+                </Text>
+              </View>
+            ) : null}
           </View>
-          <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
-            <View className="rounded-full bg-[#FFE9E9] p-2">
-              <ShieldAlert size={18} color="#E5484D" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-[13px] font-semibold">Police Control Room</Text>
-              <Text variant="muted" className="text-[12px]">
-                Emergency response
+
+          {activeEvent.description ? (
+            <View className="gap-1.5">
+              <Text className="text-[14px] font-bold">About</Text>
+              <Text className="text-[13px] leading-5 text-muted-foreground">
+                {activeEvent.description}
               </Text>
             </View>
-            <Text className="text-[13px] font-bold">112</Text>
-          </View>
-        </View>
+          ) : null}
 
-        {activeEvent ? (
+          <View className="gap-2">
+            <Text className="text-[14px] font-bold">Venue zones</Text>
+            {activeEvent.zones.length ? (
+              activeEvent.zones.map((zone) => (
+                <View
+                  key={zone.id}
+                  className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+                  <MapPin size={18} color={THEME.light.primary} />
+                  <View className="flex-1">
+                    <Text className="text-[13px] font-semibold">{zone.label}</Text>
+                    <Text variant="muted" className="text-[11px]">
+                      {zone.id}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text variant="muted" className="text-[12px]">
+                No zones provided by the organizer.
+              </Text>
+            )}
+          </View>
+
+          <View className="gap-2">
+            <Text className="text-[14px] font-bold">Emergency contact</Text>
+            <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+              <View className="rounded-full bg-[#EEEDFF] p-2">
+                <Headset size={18} color={THEME.light.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[13px] font-semibold">Event helpline</Text>
+                <Text variant="muted" className="text-[12px]">
+                  {activeEvent.helpline ?? 'No helpline provided by the organizer.'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
           <Pressable
             onPress={() => setConfirmLeave(true)}
             className="rounded-2xl border border-destructive/40 py-3.5">
             <Text className="text-center text-[14px] font-bold text-destructive">Leave Event</Text>
           </Pressable>
-        ) : (
-          <Pressable
-            onPress={() => router.push('/(tabs)/scan')}
-            className="rounded-2xl bg-primary py-4">
-            <Text className="text-center text-[14px] font-bold text-primary-foreground">
-              Join this event
-            </Text>
-          </Pressable>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Leave this event?</AlertDialogTitle>
             <AlertDialogDescription>
-              New reports will be filed without an event until you join another one.
+              New reports will require another event and zone selection.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

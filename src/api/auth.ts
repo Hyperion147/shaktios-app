@@ -22,30 +22,48 @@ function configError(): Error {
   );
 }
 
-export async function signIn(email: string, password: string): Promise<User> {
+export async function signIn(email: string, password: string): Promise<AuthSession> {
   if (!isSupabaseConfigured()) throw configError();
   const { data, error } = await getSupabase().auth.signInWithPassword({
     email: email.trim(),
     password,
   });
   if (error || !data.user) throw new Error(error?.message ?? 'Sign-in failed.');
-  return toUser(data.user.id, data.user.email ?? email.trim());
+  if (!data.session?.access_token) {
+    throw new Error('Sign-in completed without an active session. Confirm your email, then try again.');
+  }
+  return {
+    user: toUser(data.user.id, data.user.email ?? email.trim()),
+    token: data.session.access_token,
+  };
 }
 
-export async function signUp(email: string, password: string): Promise<User> {
+export async function signUp(email: string, password: string): Promise<AuthSession> {
   if (!isSupabaseConfigured()) throw configError();
   const { data, error } = await getSupabase().auth.signUp({
     email: email.trim(),
     password,
   });
   if (error || !data.user) throw new Error(error?.message ?? 'Sign-up failed.');
-  return toUser(data.user.id, data.user.email ?? email.trim());
+  if (!data.session?.access_token) {
+    throw new Error('Account created. Confirm your email, then sign in to continue.');
+  }
+  return {
+    user: toUser(data.user.id, data.user.email ?? email.trim()),
+    token: data.session.access_token,
+  };
+}
+
+export interface AuthSession {
+  user: User;
+  token: string;
 }
 
 /** Current Supabase session → citizen user + access token, or null. */
-export async function restoreSession(): Promise<{ user: User; token: string } | null> {
+export async function restoreSession(): Promise<AuthSession | null> {
   if (!isSupabaseConfigured()) return null;
-  const { data } = await getSupabase().auth.getSession();
+  const { data, error } = await getSupabase().auth.getSession();
+  if (error) throw new Error(error.message);
   const session = data.session;
   if (!session?.user || !session.access_token) return null;
   return {
@@ -56,5 +74,6 @@ export async function restoreSession(): Promise<{ user: User; token: string } | 
 
 export async function signOut(): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  await getSupabase().auth.signOut();
+  const { error } = await getSupabase().auth.signOut({ scope: 'local' });
+  if (error) throw new Error(error.message);
 }

@@ -1,7 +1,9 @@
 import '../global.css';
 
 import { NAV_THEME } from '@/lib/theme';
-import { SessionProvider } from '@/src/store/session';
+import { SessionProvider, useSession } from '@/src/store/session';
+import { LoadingState } from '@/src/components/States';
+import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { useEventDeepLink } from '@/src/hooks/useEventDeepLink';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { PortalHost } from '@rn-primitives/portal';
@@ -15,6 +17,26 @@ function DeepLinkHandler() {
   return null;
 }
 
+function SessionStack() {
+  const { user, initializing } = useSession();
+  if (initializing) return <ScreenContainer><LoadingState title="Restoring session…" /></ScreenContainer>;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
+      <Stack.Protected guard={Boolean(user)}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="report" />
+        <Stack.Screen name="report-details" />
+        <Stack.Screen name="location" />
+        <Stack.Screen name="review" />
+        <Stack.Screen name="submitted" />
+        <Stack.Screen name="report-detail" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   // Single light theme (dark mode removed from globals.css).
   return (
@@ -22,9 +44,7 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <SessionProvider>
         <DeepLinkHandler />
-        <Stack
-          screenOptions={{ headerShown: false }}
-        />
+        <SessionStack />
       </SessionProvider>
       <PortalHost />
     </ThemeProvider>

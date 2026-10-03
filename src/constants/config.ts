@@ -3,25 +3,26 @@ import type { IncidentCategory } from '@/src/types';
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiUrl?: string };
 
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? extra.apiUrl ?? 'http://localhost:8000';
-
 /**
- * Public Supabase configuration (publishable key only — safe for clients).
- * Never add the service-role key or backend secrets here.
+ * API base URL is injected into the Expo bundle at startup. Android's
+ * localhost is the emulator/device itself, not the development computer, so
+ * the checked-in fallback uses the Android emulator host alias.
  */
-export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Constants.platform?.android ? 'http://10.0.2.2:8000' : undefined) ??
+  extra.apiUrl ??
+  'http://localhost:8000';
 
-export const SUPABASE_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+/** Public Supabase configuration (publishable key only). */
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+export const SUPABASE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 
 export function isSupabaseConfigured(): boolean {
   return SUPABASE_URL.length > 0 && SUPABASE_PUBLISHABLE_KEY.length > 0;
 }
 
 export const REQUEST_TIMEOUT_MS = 15_000;
-
-/** Source tag sent with every citizen signal so the pipeline can attribute it. */
 export const CITIZEN_SOURCE = 'citizen_app';
 export const CITIZEN_EVENT_TYPE = 'citizen_report';
 
@@ -32,55 +33,10 @@ export const INCIDENT_CATEGORIES: IncidentCategory[] = [
   { id: 'suspicious', label: 'Suspicious Activity', hint: 'Unattended items or odd behaviour' },
   { id: 'lost_person', label: 'Lost Person', hint: 'Missing child or person' },
   { id: 'violence', label: 'Violence / Conflict', hint: 'Fight or threatening behaviour' },
-  { id: 'infrastructure', label: 'Infrastructure Issue', hint: 'Blocked exit, broken barrier, power' },
+  {
+    id: 'infrastructure',
+    label: 'Infrastructure Issue',
+    hint: 'Blocked exit, broken barrier, power',
+  },
   { id: 'other', label: 'Other', hint: 'Something else authorities should know' },
 ];
-
-/** Demo default — maps to venue_event_id. Replace when backend event registry lands. */
-export const DEFAULT_ACTIVE_EVENT_ID = 'evt-techfest-2025';
-
-/**
- * Quick-pick textual zones. GPS stays optional; a plain label is enough.
- * "Gate 4" is the hackathon golden-path demo zone — keep its exact casing:
- * the backend correlates incidents by exact location string.
- */
-export const LOCATION_PRESETS = ['Gate 3', 'Gate 4', 'Food Court', 'Main Stage'];
-
-export const ACTIVE_EVENT = {
-  venue: 'City Convention Center, Delhi',
-  dates: '12 Apr 2025 - 14 Apr 2025',
-  about:
-    'TechFest 2025 is a technology and innovation festival bringing together industry leaders, creators and enthusiasts from across the globe.',
-  helpline: '+91 98765 43210',
-  police: '112',
-};
-
-export const MOCK_VENUE_EVENTS = [
-  {
-    id: 'evt-techfest-2025',
-    name: 'TechFest 2025',
-    description: 'City Convention Center, Delhi — 12 Apr 2025 - 14 Apr 2025.',
-    locationLabel: 'Gate 3',
-    status: 'active' as const,
-  },
-  {
-    id: 'evt-riverfest-2026',
-    name: 'Riverfest 2026',
-    description: 'Main Ground — Main Stage, Food Court, Gates 3 & 4.',
-    locationLabel: 'Gate 4',
-    status: 'active' as const,
-  },
-  {
-    id: 'evt-marathon-2026',
-    name: 'City Marathon Start Zone',
-    description: 'Demo event — start-line corrals.',
-    locationLabel: 'start_line',
-    status: 'active' as const,
-  },
-];
-
-/** Human-readable event name for a venue_event_id. Falls back to the raw id. */
-export function venueEventName(eventId: string | null | undefined): string {
-  if (!eventId) return 'TechFest 2025';
-  return MOCK_VENUE_EVENTS.find((e) => e.id === eventId)?.name ?? eventId;
-}

@@ -1,32 +1,32 @@
 import * as React from 'react';
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import { useSession } from '@/src/store/session';
+import { parseEventQr } from '@/src/utils/qr';
 
-/**
- * Future QR / deep-link entry: accepts `shaktios-app://event/<eventId>`
- * (QR codes encode the same `shaktios://event/<id>` payload parsed by
- * utils/qr). Validation stays backend-authoritative via validateEventId().
- * Mounted once in the root layout; no-op until links arrive.
- */
+/** Open a venue link in the join screen, with visible validation and retry. */
 export function useEventDeepLink() {
-  const { validateEventId, joinEvent } = useSession();
+  const { initializing } = useSession();
+  const router = useRouter();
+  const [eventId, setEventId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    let mounted = true;
     const handle = (url: string | null) => {
-      if (!url) return;
-      const parsed = Linking.parse(url);
-      const segments = parsed.path?.split('/').filter(Boolean) ?? [];
-      const eventIndex = segments.findIndex((s) => s.toLowerCase() === 'event');
-      const eventId =
-        eventIndex >= 0 ? segments[eventIndex + 1] : parsed.queryParams?.eventId;
-      if (typeof eventId === 'string' && eventId) {
-        const event = validateEventId(eventId);
-        if (event) joinEvent(event);
-      }
+      if (!url || !/^shaktios(?:-app)?:\/\/event\//i.test(url)) return;
+      try {
+        const parsed = parseEventQr(url);
+        if (mounted) setEventId(parsed.eventId);
+      } catch { /* Non-event links are handled by Expo Router. */ }
     };
-
     Linking.getInitialURL().then(handle).catch(() => {});
-    const sub = Linking.addEventListener('url', ({ url }) => handle(url));
-    return () => sub.remove();
-  }, [validateEventId, joinEvent]);
+    const subscription = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => { mounted = false; subscription.remove(); };
+  }, []);
+
+  React.useEffect(() => {
+    if (initializing || !eventId) return;
+    router.replace({ pathname: '/scan', params: { eventId } });
+    setEventId(null);
+  }, [initializing, eventId, router]);
 }

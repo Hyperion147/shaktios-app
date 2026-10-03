@@ -41,8 +41,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? REQUEST_TIMEOUT_MS);
 
   try {
-    // Centralized auth: explicit per-call token → cached token → live Supabase session.
-    const token = options.token ?? authToken ?? (await getAccessToken());
+    // Prefer the live Supabase session so an automatic refresh is reflected
+    // in API calls; the direct login token remains a fallback during the
+    // SecureStore persistence race immediately after sign-in.
+    const token = options.token ?? (await getAccessToken()) ?? authToken;
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       signal: controller.signal,
@@ -54,23 +56,32 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
 
     const text = await res.text();
-    const data = text ? (JSON.parse(text) as T) : (undefined as T);
+    let data: T | undefined;
+    try {
+      data = text ? (JSON.parse(text) as T) : undefined;
+    } catch {
+      if (res.ok) throw new ApiErrorShape('The server returned an invalid response. Please retry.', { code: 'invalid_response' });
+    }
 
     if (!res.ok) {
       const detail =
         typeof data === 'object' && data !== null && 'detail' in data
           ? String((data as { detail: unknown }).detail)
           : `Request failed (${res.status})`;
-      // 401 surfaces as session expiry; screens route back to login.
-      throw new ApiErrorShape(detail, {
+      // Keep backend auth failures visible to the current screen. A 401 can
+      // mean the API rejected a still-valid Supabase session; callers should
+      // offer retry/sign-out guidance instead of forcing an auth loop.
+      throw new ApiErrorShape(res.status === 401
+        ? 'The server rejected the current session. Retry; if it persists, sign out from Profile and sign in again. If a fresh sign-in still fails, ask the operator to check the API authentication configuration.'
+        : detail, {
         status: res.status,
         code: res.status === 401 ? 'unauthorized' : res.status >= 500 ? 'server' : 'validation',
       });
     }
-    return data;
+    return data as T;
   } catch (error) {
     if (error instanceof ApiErrorShape) throw error;
-    if (error instanceof DOMException && error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new ApiErrorShape('Request timed out. Please try again.', { code: 'timeout' });
     }
     throw new ApiErrorShape('Unable to reach the ShaktiOS server. Please try again.', {

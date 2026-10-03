@@ -1,14 +1,16 @@
 import { apiRequest } from '@/src/api/client';
-import type { BackendEvent } from '@/src/types';
+import type { BackendEvent, VenueEvent } from '@/src/types';
 
-/**
- * Single-user reporting reads only.
- * Uses shakti-os FastAPI (see ../shakti-os docs/API.md):
- *   GET /health, GET /events?limit=, POST /events (citizen_report), GET /me.
- * No incident / timeline / status / action / WebSocket — those are operator
- * dashboard concerns and stay out of this citizen reporting app.
- */
 export const eventsApi = {
   list: (limit = 50) => apiRequest<BackendEvent[]>(`/events?limit=${limit}`),
   health: () => apiRequest<{ status: string; service: string }>('/health'),
 };
+
+/** Venue registry is server-owned; the app never ships a fallback venue list. */
+export function fetchVenues(): Promise<VenueEvent[]> {
+  return apiRequest<VenueEvent[]>('/venues');
+}
+
+export function fetchVenue(id: string): Promise<VenueEvent> {
+  return apiRequest<VenueEvent>(`/venues/${encodeURIComponent(id)}`);
+}

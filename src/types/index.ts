@@ -1,26 +1,33 @@
 // Shared ShaktiOS citizen-app types.
-// Backend-authoritative models mirror services/api (FastAPI).
-// Auth identity comes from Supabase Auth (JWT `sub`, verified by FastAPI).
-// VenueEvent is client-side onboarding context — the backend has no
-// venue-event registry (venue_event_id is an opaque string in the payload).
+// Auth identity comes from Supabase Auth (JWT `sub`). Operational data is
+// always loaded from the FastAPI API; this file contains no demo records.
 
 export interface User {
   id: string;
   name: string;
-  phone?: string;
   email?: string;
   role: 'citizen';
 }
 
-/** Venue/event onboarding context (client-side until backend adds a registry). */
+export interface VenueZone {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+/** Venue metadata returned by GET /venues and GET /venues/{id}. */
 export interface VenueEvent {
   id: string;
   name: string;
-  description?: string;
-  locationLabel?: string;
+  description: string;
+  venue: string;
+  locationLabel: string;
+  zones: VenueZone[];
   status: 'active' | 'upcoming' | 'ended';
-  startTime?: string;
-  endTime?: string;
+  startTime: string | null;
+  endTime: string | null;
+  helpline: string | null;
 }
 
 export type IncidentCategoryId =
@@ -47,29 +54,13 @@ export interface ReportLocation {
   timestamp: string;
 }
 
-export type CitizenReportStatus =
-  | 'submitted'
-  | 'received'
-  | 'under_review'
-  | 'action_initiated'
-  | 'resolved'
-  | 'rejected';
+export type ReportStatus =
+  'submitted' | 'received' | 'under_review' | 'action_initiated' | 'resolved';
 
-/** Raw citizen observation. Risk is computed server-side only. */
-export interface CitizenReport {
-  id: string;
-  eventId?: string | null;
-  category: IncidentCategoryId;
-  description: string;
-  location: ReportLocation | null;
-  locationLabel: string;
-  urgency: 'normal' | 'high';
-  createdAt: string;
-  status: CitizenReportStatus;
-  backendEventId?: string;
-}
+export type BackendIncidentStatus = 'DETECTED' | 'ASSESSING' | 'RESPONDING' | 'RESOLVED';
+export type BackendSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-/** Backend signal event (POST /events). reporter_id is server-stamped from the JWT. */
+/** Raw event returned by POST /events and embedded in report responses. */
 export interface BackendEvent {
   id: string;
   type: string;
@@ -81,8 +72,13 @@ export interface BackendEvent {
   reporter_id?: string | null;
 }
 
-export type BackendIncidentStatus = 'DETECTED' | 'ASSESSING' | 'RESPONDING' | 'RESOLVED';
-export type BackendSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+/** Citizen-owned event returned by GET /me/reports and GET /me/reports/{id}. */
+export interface CitizenReportRecord extends BackendEvent {
+  incident_id: string | null;
+  incident_status: BackendIncidentStatus | null;
+  report_status: ReportStatus;
+  venue_name: string | null;
+}
 
 export interface BackendIncident {
   id: string;
@@ -111,28 +107,6 @@ export interface ApiError {
   code: string;
 }
 
-// ---- Spec-facing aliases (same models, canonical names) ----
-/** Provisional: backend has no venue-event registry yet; client-side only. */
+// Backwards-compatible name used by a few route declarations.
 export type Event = VenueEvent;
-/** Citizen-facing category config; backend receives the id as a plain string. */
-export type ReportCategory = IncidentCategory;
-/** Structured GPS fix; always optional alongside the textual zone label. */
 export type Location = ReportLocation;
-/** Citizen-facing lifecycle; backend owns incident status separately. */
-export type ReportStatus = CitizenReportStatus;
-
-/**
- * Provisional submission envelope.
- * ReportsApi.submitReport() currently maps this onto the ACTUAL backend
- * schema (POST /events, type "citizen_report"). `photoUri` is captured
- * locally only — the backend MVP has no media upload yet.
- */
-export interface ReportSubmission {
-  category: IncidentCategoryId;
-  description: string;
-  locationLabel: string;
-  urgency: 'normal' | 'high';
-  gps: ReportLocation | null;
-  photoUri: string | null;
-  eventId: string | null;
-}

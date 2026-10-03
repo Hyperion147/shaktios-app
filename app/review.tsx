@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -25,24 +25,28 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Screen 9 — Review report before submitting. */
+/** Review and submit one authenticated report. */
 export default function ReviewScreen() {
   const router = useRouter();
-  const { draft, activeEvent, pendingLocation, addReport, setDraft } = useSession();
+  const { user, draft, activeEvent, pendingLocation, setDraft, setPendingLocation } = useSession();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  // Synchronous in-flight guard: `busy` alone can't stop rapid double-taps
-  // because state updates flush asynchronously. The ref flips synchronously,
-  // so a second tap while the POST is in flight is a no-op. Reset in
-  // `finally` so genuine failures remain retryable.
   const submittingRef = React.useRef(false);
 
   const categoryLabel =
-    INCIDENT_CATEGORIES.find((c) => c.id === draft.category)?.label ?? draft.category;
+    INCIDENT_CATEGORIES.find((item) => item.id === draft.category)?.label ?? draft.category;
   const urgencyLabel = draft.urgency.charAt(0).toUpperCase() + draft.urgency.slice(1);
 
   const submit = async () => {
     if (submittingRef.current) return;
+    if (!user) {
+      setError('You must be signed in to submit a citizen report.');
+      return;
+    }
+    if (!activeEvent || !draft.zoneId) {
+      setError('Select an event and venue zone before submitting.');
+      return;
+    }
     submittingRef.current = true;
     setBusy(true);
     setError(null);
@@ -51,33 +55,23 @@ export default function ReviewScreen() {
         category: draft.category,
         description: draft.description,
         locationLabel: draft.locationLabel,
+        zoneId: draft.zoneId,
         latitude: pendingLocation?.latitude ?? null,
         longitude: pendingLocation?.longitude ?? null,
         accuracy: pendingLocation?.accuracy ?? null,
-        eventId: activeEvent?.id ?? null,
+        eventId: activeEvent.id,
         urgency: draft.urgency === 'high' ? 'high' : 'normal',
       });
-      addReport({
-        id: event.id,
-        eventId: activeEvent?.id ?? null,
-        category: draft.category,
-        description: draft.description,
-        location: pendingLocation,
-        locationLabel: draft.locationLabel,
-        urgency: draft.urgency === 'high' ? 'high' : 'normal',
-        createdAt: event.timestamp,
-        status: 'submitted',
-        backendEventId: event.id,
-      });
-      setDraft({ description: '', photoUri: null });
+      setDraft({ description: '' });
+      setPendingLocation(null);
       router.replace({ pathname: '/submitted', params: { id: event.id } });
     } catch (e) {
       const err = normalizeError(e);
-      if (err.code === 'unauthorized') {
-        router.replace('/login');
-        return;
-      }
-      setError(err.message);
+      setError(
+        err.code === 'unauthorized'
+          ? 'The server rejected this session even though the app is signed in. Retry once; if it persists, sign out and sign in again.'
+          : err.message
+      );
     } finally {
       submittingRef.current = false;
       setBusy(false);
@@ -92,7 +86,7 @@ export default function ReviewScreen() {
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
         <Row label="Event">
-          <Text className="text-[14px] font-bold">{activeEvent?.name ?? 'TechFest 2025'}</Text>
+          <Text className="text-[14px] font-bold">{activeEvent?.name ?? '—'}</Text>
         </Row>
         <Row label="Category">
           <Text className="text-[14px] font-bold">{categoryLabel}</Text>
@@ -102,38 +96,26 @@ export default function ReviewScreen() {
             {draft.description || 'No description provided.'}
           </Text>
         </Row>
-        <Row label="Location">
+        <Row label="Venue zone">
           <Text className="text-[14px] font-bold">{draft.locationLabel || '—'}</Text>
+          <Text variant="muted" className="text-[12px]">
+            Canonical zone id: {draft.zoneId || '—'}
+          </Text>
           <Text variant="muted" className="text-[12px]">
             {pendingLocation
               ? `${formatCoords(pendingLocation)} · ${new Date(pendingLocation.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })}`
-              : 'Area name only — no GPS attached'}
+              : 'Area zone selected — no GPS attached'}
           </Text>
         </Row>
         <Row label="Urgency">
-          <Text className="text-[14px] font-bold">🟡 {urgencyLabel}</Text>
-        </Row>
-        <Row label="Attachments">
-          {draft.photoUri ? (
-            <Image
-              source={{ uri: draft.photoUri }}
-              className="h-28 w-full rounded-xl"
-              resizeMode="cover"
-            />
-          ) : (
-            <Text variant="muted" className="text-[12px]">
-              No media attached
-            </Text>
-          )}
+          <Text className="text-[14px] font-bold">{urgencyLabel}</Text>
         </Row>
 
         {error ? (
           <View className="gap-3">
             <Alert icon={TriangleAlert} variant="destructive">
-              <AlertTitle>Couldn't submit report</AlertTitle>
-              <AlertDescription>
-                {error} — check your connection and try again.
-              </AlertDescription>
+              <AlertTitle>Couldn’t submit report</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
             <Button onPress={submit} disabled={busy} className="h-14 w-full rounded-2xl">
               <Text className="text-[15px] font-bold">

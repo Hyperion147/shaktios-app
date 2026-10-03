@@ -77,12 +77,12 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               <View
                 className={cn(
                   'h-7 w-7 items-center justify-center rounded-full',
-                  active || done ? 'bg-primary' : 'bg-border/60',
+                  active || done ? 'bg-primary' : 'bg-border/60'
                 )}>
                 <Text
                   className={cn(
                     'text-[13px] font-bold',
-                    active || done ? 'text-primary-foreground' : 'text-muted-foreground',
+                    active || done ? 'text-primary-foreground' : 'text-muted-foreground'
                   )}>
                   {done ? '✓' : i + 1}
                 </Text>
@@ -90,12 +90,14 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               <Text
                 className={cn(
                   'text-center text-[11px]',
-                  active ? 'font-bold text-foreground' : 'text-muted-foreground',
+                  active ? 'font-bold text-foreground' : 'text-muted-foreground'
                 )}>
                 {label}
               </Text>
             </View>
-            {i < steps.length - 1 ? <View className="mx-0.5 mt-3.5 h-0.5 flex-1 bg-border/70" /> : null}
+            {i < steps.length - 1 ? (
+              <View className="mx-0.5 mt-3.5 h-0.5 flex-1 bg-border/70" />
+            ) : null}
           </React.Fragment>
         );
       })}
@@ -184,7 +186,7 @@ export function CategoryTile({
       accessibilityState={{ selected }}
       className={cn(
         'flex-1 items-center gap-2 rounded-2xl border bg-card px-2 py-4 active:opacity-80',
-        selected ? 'border-2 border-primary' : 'border-border',
+        selected ? 'border-2 border-primary' : 'border-border'
       )}>
       <View
         style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: meta.bg }}
@@ -201,9 +203,7 @@ export function CategoryTile({
 export function InfoNote({ text }: { text: string }) {
   return (
     <Alert icon={Info} className="border-transparent bg-[#EEEDFF]">
-      <AlertDescription className="text-[12px] leading-5 text-foreground">
-        {text}
-      </AlertDescription>
+      <AlertDescription className="text-[12px] leading-5 text-foreground">{text}</AlertDescription>
     </Alert>
   );
 }
@@ -214,7 +214,6 @@ const PILL_STYLES: Record<string, { bg: string; fg: string }> = {
   action_initiated: { bg: '#FFEAD1', fg: '#B25E09' },
   submitted: { bg: '#E3F2FF', fg: '#1B6FD0' },
   resolved: { bg: '#DFF7E8', fg: '#1E7F4D' },
-  rejected: { bg: '#FFE3E3', fg: '#C92A2A' },
 };
 
 export function StatusPill({ status, label }: { status: string; label?: string }) {
@@ -222,7 +221,7 @@ export function StatusPill({ status, label }: { status: string; label?: string }
   return (
     <Badge style={{ backgroundColor: s.bg }} className="border-transparent px-2.5 py-1">
       <Text style={{ color: s.fg }} className="text-[11px] font-bold">
-        {label ?? status.replace(/_/g, ' ')}
+        {label ?? (status === 'action_initiated' ? 'Operator Responding' : status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()))}
       </Text>
     </Badge>
   );

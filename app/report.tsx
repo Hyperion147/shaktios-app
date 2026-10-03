@@ -1,12 +1,13 @@
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { ScreenContainer } from '@/src/components/ScreenContainer';
 import { CategoryTile, PrimaryButton, ScreenHeader, Stepper } from '@/src/components/design';
 import { useSession } from '@/src/store/session';
+import { VenueState } from '@/src/components/VenueState';
 import { INCIDENT_CATEGORIES } from '@/src/constants/config';
 
-/** Screen 6 — Report Incident step 1: select category. */
+/** Select the incident category before collecting report details. */
 export default function ReportCategoryScreen() {
   const router = useRouter();
   const { draft, setDraft, activeEvent } = useSession();
@@ -16,6 +17,10 @@ export default function ReportCategoryScreen() {
     rows.push(INCIDENT_CATEGORIES.slice(i, i + 2));
   }
 
+  const canContinue = Boolean(
+    activeEvent && activeEvent.status !== 'ended' && activeEvent.zones.length > 0
+  );
+
   return (
     <ScreenContainer className="px-0">
       <View className="px-5">
@@ -23,15 +28,34 @@ export default function ReportCategoryScreen() {
         <Stepper steps={['Category', 'Details', 'Location', 'Review']} current={0} />
       </View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-3 pb-6">
+        <VenueState />
         <Text className="text-[15px] font-bold">Select Incident Category</Text>
-        {activeEvent ? null : (
+        {!activeEvent ? (
+          <View className="gap-2 rounded-2xl bg-[#FFF4D6] p-3">
+            <Text className="text-[12px] font-semibold">
+              Join a venue event before reporting so the backend can route this report to a
+              canonical zone.
+            </Text>
+            <Pressable onPress={() => router.push('/(tabs)/scan')}>
+              <Text className="text-[12px] font-bold text-primary">Join an event</Text>
+            </Pressable>
+          </View>
+        ) : activeEvent.status === 'ended' ? (
+          <View className="gap-2 rounded-2xl bg-[#FFF4D6] p-3">
+            <Text className="text-[12px] font-semibold">
+              This event has ended. Join an active or upcoming event to report.
+            </Text>
+            <Pressable onPress={() => router.push('/(tabs)/scan')}>
+              <Text className="text-[12px] font-bold text-primary">Choose another event</Text>
+            </Pressable>
+          </View>
+        ) : activeEvent.zones.length === 0 ? (
           <View className="rounded-2xl bg-[#FFF4D6] p-3">
             <Text className="text-[12px] font-semibold">
-              No event joined — the report will be filed without an event. Join one from Scan for
-              faster routing.
+              This event has no reportable zones yet. Try another event.
             </Text>
           </View>
-        )}
+        ) : null}
         {rows.map((row, ri) => (
           <View key={ri} className="flex-row gap-3">
             {row.map((cat) => (
@@ -47,7 +71,11 @@ export default function ReportCategoryScreen() {
           </View>
         ))}
         <View className="mt-2">
-          <PrimaryButton title="Next" onPress={() => router.push('/report-details')} />
+          <PrimaryButton
+            title="Next"
+            onPress={() => router.push('/report-details')}
+            disabled={!canContinue}
+          />
         </View>
       </ScrollView>
     </ScreenContainer>

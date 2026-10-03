@@ -10,165 +10,76 @@ import { useSession } from '@/src/store/session';
 import { captureLocation, type LocationState } from '@/src/utils/location';
 import { THEME } from '@/lib/theme';
 
-/** Stylized map placeholder: streets + accuracy radius + pin. */
-function MapPlaceholder({ captured }: { captured: boolean }) {
-  return (
-    <View className="relative h-72 overflow-hidden rounded-3xl bg-[#E8EBF1]">
-      {/* streets */}
-      <View className="absolute left-0 top-10 h-3 w-full bg-white/90" />
-      <View className="absolute left-0 top-40 h-4 w-full bg-white/90" />
-      <View className="absolute left-8 top-0 h-full w-3 bg-white/90" />
-      <View className="absolute right-16 top-0 h-full w-4 bg-white/90" />
-      <View className="absolute left-0 top-24 h-2 w-full rotate-6 bg-white/70" />
-      {/* blocks */}
-      <View className="absolute left-16 top-16 h-10 w-20 rounded bg-[#DDE1E9]" />
-      <View className="absolute bottom-10 right-8 h-12 w-24 rounded bg-[#DDE1E9]" />
-      <View className="absolute bottom-16 left-14 h-8 w-14 rounded bg-[#DDE1E9]" />
-      {/* accuracy radius + pin */}
-      {captured ? (
-        <View className="absolute inset-0 items-center justify-center">
-          <View className="h-36 w-36 items-center justify-center rounded-full bg-primary/15">
-            <View className="h-24 w-24 items-center justify-center rounded-full bg-primary/25">
-              <View className="h-5 w-5 rounded-full border-[3px] border-white bg-primary" />
-            </View>
-          </View>
-        </View>
-      ) : (
-        <View className="absolute inset-0 items-center justify-center">
-          <MapPin size={40} color={THEME.light.mutedForeground} />
-          <Text variant="muted" className="mt-1 text-[12px]">
-            Waiting for location…
-          </Text>
-        </View>
-      )}
-      {/* recenter */}
-      <View className="absolute bottom-3 right-3 rounded-full bg-white p-2.5 shadow">
-        <LocateFixed size={18} color={THEME.light.foreground} />
-      </View>
-    </View>
-  );
-}
-
-/** Screen 8 — Location capture with GPS fix + details grid. */
+/** Optional device GPS evidence, not a decorative map or invented accuracy. */
 export default function LocationScreen() {
   const router = useRouter();
-  const { pendingLocation, setPendingLocation } = useSession();
+  const { pendingLocation, setPendingLocation, draft } = useSession();
   const [state, setState] = React.useState<LocationState>(
     pendingLocation ? { status: 'ready', location: pendingLocation } : { status: 'idle' },
   );
+  const [linkError, setLinkError] = React.useState<string | null>(null);
+  const inFlight = React.useRef(false);
+  const mounted = React.useRef(true);
 
-  const request = React.useCallback(async () => {
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const request = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setState({ status: 'requesting' });
     try {
       const location = await captureLocation();
-      setState({ status: 'ready', location });
+      if (!mounted.current) return;
       setPendingLocation(location);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Location unavailable.';
-      setState({
-        status: message.includes('denied') ? 'denied' : 'unavailable',
-        message,
-      });
+      setState({ status: 'ready', location });
+    } catch (error) {
+      if (!mounted.current) return;
+      const message = error instanceof Error ? error.message : 'Location unavailable.';
+      setState({ status: message.toLowerCase().includes('denied') ? 'denied' : 'unavailable', message });
       setPendingLocation(null);
+    } finally {
+      inFlight.current = false;
     }
-  }, [setPendingLocation]);
+  };
 
-  React.useEffect(() => {
-    if (!pendingLocation) request();
-  }, [request, pendingLocation]);
-
-  const loc = state.status === 'ready' ? state.location : pendingLocation;
-  const takenAt = loc ? new Date(loc.timestamp) : null;
-
-  const cells: [string, string][] = [
-    ['Latitude', loc ? loc.latitude.toFixed(4) : '—'],
-    ['Longitude', loc ? loc.longitude.toFixed(4) : '—'],
-    ['Accuracy', loc?.accuracy != null ? `± ${Math.round(loc.accuracy)} m` : '—'],
-    [
-      'Time',
-      takenAt
-        ? takenAt.toLocaleString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            hour: 'numeric',
-            minute: '2-digit',
-          })
-        : '—',
-    ],
-  ];
+  const loc = pendingLocation;
+  const openMap = async () => {
+    if (!loc) return;
+    setLinkError(null);
+    try {
+      await Linking.openURL(`https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}#map=17/${loc.latitude}/${loc.longitude}`);
+    } catch { setLinkError('Could not open the map. Your coordinates are shown below.'); }
+  };
+  const next = () => router.push('/review');
 
   return (
     <ScreenContainer className="px-0">
-      <View className="px-5">
-        <ScreenHeader title="Location" onBack={() => router.back()} />
-      </View>
+      <View className="px-5"><ScreenHeader title="Location" onBack={() => router.back()} /></View>
       <ScrollView className="flex-1 px-5" contentContainerClassName="gap-4 pb-6">
-        <MapPlaceholder captured={!!loc} />
-
-        <View className="gap-2">
-          <Text className="text-[13px] font-bold">Location Details</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {cells.map(([label, value]) => (
-              <View key={label} className="min-w-[46%] flex-1 gap-0.5 rounded-2xl bg-secondary/70 p-3">
-                <Text className="text-[11px] text-muted-foreground">{label}</Text>
-                <Text className="text-[14px] font-bold">{value}</Text>
-              </View>
-            ))}
-          </View>
+        <View className="gap-3 rounded-3xl border border-border bg-card p-5">
+          <MapPin size={28} color={THEME.light.primary} />
+          <Text className="text-[17px] font-bold">{draft.locationLabel || 'No zone selected'}</Text>
+          <Text className="text-[13px] leading-5 text-muted-foreground">Your selected venue zone identifies the report location. You can optionally attach your current GPS position as additional evidence.</Text>
+          {loc && <Pressable accessibilityRole="link" onPress={openMap} className="self-start rounded-xl bg-primary/10 px-4 py-3"><Text className="font-semibold text-primary">View captured position on a map</Text></Pressable>}
         </View>
-
-        {state.status === 'requesting' ? (
-          <View className="flex-row items-center gap-2 rounded-2xl bg-secondary/70 p-3.5">
-            <ActivityIndicator color={THEME.light.primary} />
-            <Text className="text-[12px] font-semibold">Capturing your location…</Text>
-          </View>
-        ) : loc ? (
-          <View className="flex-row items-center gap-2 rounded-2xl bg-[#DFF7E8] p-3.5">
-            <CheckCircle2 size={18} color="#1E7F4D" />
-            <Text className="text-[12px] font-bold text-[#1E7F4D]">
-              Location captured successfully
-            </Text>
-          </View>
-        ) : (
-          <View className="gap-2 rounded-2xl border border-border bg-card p-4">
-            <Text className="text-[13px] font-bold">
-              {state.status === 'denied' ? 'Location Permission' : 'Location unavailable'}
-            </Text>
-            <Text variant="muted" className="text-[12px]">
-              {state.status === 'denied'
-                ? 'Location permission is required to report incidents. You can still continue with the area name.'
-                : 'message' in state
-                  ? state.message
-                  : 'Could not get your GPS fix. You can still continue with the area name.'}
-            </Text>
-            <View className="mt-1 flex-row gap-2">
-              {state.status === 'denied' ? (
-                <Pressable
-                  onPress={() => Linking.openSettings()}
-                  className="flex-1 rounded-xl bg-primary py-3">
-                  <Text className="text-center text-[13px] font-bold text-primary-foreground">
-                    Open Settings
-                  </Text>
-                </Pressable>
-              ) : (
-                <Pressable onPress={request} className="flex-1 rounded-xl bg-primary py-3">
-                  <Text className="text-center text-[13px] font-bold text-primary-foreground">
-                    Retry
-                  </Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => router.push('/review')}
-                className="flex-1 rounded-xl border border-border py-3">
-                <Text className="text-center text-[13px] font-semibold text-muted-foreground">
-                  Continue anyway
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        <PrimaryButton title="Next" onPress={() => router.push('/review')} />
+        {loc && <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View className="flex-row items-center gap-2"><CheckCircle2 size={18} color={THEME.light.primary} /><Text className="font-bold">GPS position captured</Text></View>
+          {[
+            ['Latitude', loc.latitude.toFixed(6)],
+            ['Longitude', loc.longitude.toFixed(6)],
+            ['Accuracy', loc.accuracy != null ? `± ${Math.round(loc.accuracy)} m` : 'Not provided by device'],
+            ['Captured', new Date(loc.timestamp).toLocaleString()],
+          ].map(([label, value]) => <View key={label} className="flex-row flex-wrap justify-between gap-2"><Text className="text-[12px] text-muted-foreground">{label}</Text><Text className="text-[12px] font-semibold">{value}</Text></View>)}
+          <Pressable accessibilityRole="button" onPress={() => { setPendingLocation(null); setState({ status: 'idle' }); }}><Text className="text-[12px] text-destructive">Remove GPS position</Text></Pressable>
+        </View>}
+        {'message' in state && <Text accessibilityRole="alert" className="text-[13px] text-destructive">{state.message} You can continue with your selected venue zone.</Text>}
+        {linkError && <Text accessibilityRole="alert" className="text-[13px] text-destructive">{linkError}</Text>}
+        {state.status === 'requesting' ? <View className="flex-row items-center gap-2 p-3"><ActivityIndicator color={THEME.light.primary} /><Text>Capturing GPS position…</Text></View> : <Pressable accessibilityRole="button" onPress={request} className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4"><LocateFixed size={18} color={THEME.light.primary} /><Text className="font-semibold text-primary">{loc ? 'Refresh GPS position' : 'Capture GPS position'}</Text></Pressable>}
+        {state.status === 'denied' && <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()}><Text className="text-center font-semibold text-primary">Open location settings</Text></Pressable>}
+        <PrimaryButton title={loc ? 'Continue with GPS' : 'Continue with zone only'} onPress={next} disabled={state.status === 'requesting' || !draft.zoneId} />
       </ScrollView>
     </ScreenContainer>
   );
