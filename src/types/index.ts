@@ -1,6 +1,31 @@
-// Shared ShaktiOS citizen-app types.
-// Auth identity comes from Supabase Auth (JWT `sub`). Operational data is
-// always loaded from the FastAPI API; this file contains no demo records.
+// Client-only types and aliases for the generated API contracts.
+// The generated wire models are refreshed from shakti-os/scripts/generate_contracts.py.
+import type {
+  CitizenReport as ContractCitizenReport,
+  Event as ContractEvent,
+  Incident as ContractIncident,
+  IncidentCategoryId as ContractIncidentCategoryId,
+  IncidentSeverity,
+  IncidentStatus,
+  TimelineEntry as ContractTimelineEntry,
+  Venue as ContractVenue,
+  VenueZone as ContractVenueZone,
+} from './contracts';
+
+export type {
+  CameraDetectionInput,
+  EventInput,
+  Integrations,
+  Me,
+  PriorityAssessment,
+  PublicOverview,
+  ReportStatus,
+  Urgency,
+  VoiceConfig,
+  VoiceDraft,
+  VoiceFields,
+  VoiceLanguage,
+} from './contracts';
 
 export interface User {
   id: string;
@@ -9,36 +34,11 @@ export interface User {
   role: 'citizen';
 }
 
-export interface VenueZone {
-  id: string;
-  label: string;
-  latitude: number;
-  longitude: number;
-}
-
+export type VenueZone = ContractVenueZone;
 /** Venue metadata returned by GET /venues and GET /venues/{id}. */
-export interface VenueEvent {
-  id: string;
-  name: string;
-  description: string;
-  venue: string;
-  locationLabel: string;
-  zones: VenueZone[];
-  status: 'active' | 'upcoming' | 'ended';
-  startTime: string | null;
-  endTime: string | null;
-  helpline: string | null;
-}
+export type VenueEvent = ContractVenue;
 
-export type IncidentCategoryId =
-  | 'crowd'
-  | 'medical'
-  | 'lost_person'
-  | 'fire_smoke'
-  | 'suspicious'
-  | 'violence'
-  | 'infrastructure'
-  | 'other';
+export type IncidentCategoryId = ContractIncidentCategoryId;
 
 export interface IncidentCategory {
   id: IncidentCategoryId;
@@ -54,52 +54,13 @@ export interface ReportLocation {
   timestamp: string;
 }
 
-export type ReportStatus =
-  'submitted' | 'received' | 'under_review' | 'action_initiated' | 'resolved';
-
-export type BackendIncidentStatus = 'DETECTED' | 'ASSESSING' | 'RESPONDING' | 'RESOLVED';
-export type BackendSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-
-/** Raw event returned by POST /events and embedded in report responses. */
-export interface BackendEvent {
-  id: string;
-  type: string;
-  source: string;
-  timestamp: string;
-  location: string;
-  confidence: number;
-  payload: Record<string, unknown>;
-  reporter_id?: string | null;
-}
-
-/** Citizen-owned event returned by GET /me/reports and GET /me/reports/{id}. */
-export interface CitizenReportRecord extends BackendEvent {
-  incident_id: string | null;
-  incident_status: BackendIncidentStatus | null;
-  report_status: ReportStatus;
-  venue_name: string | null;
-}
-
-export interface BackendIncident {
-  id: string;
-  type: string;
-  location: string;
-  status: BackendIncidentStatus;
-  severity: BackendSeverity;
-  confidence: number;
-  risk: number;
-  factors: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TimelineEntry {
-  id: string;
-  incident_id: string;
-  type: string;
-  timestamp: string;
-  details: Record<string, unknown>;
-}
+export type BackendIncidentStatus = IncidentStatus;
+export type BackendSeverity = IncidentSeverity;
+export type BackendEvent = ContractEvent;
+export type CitizenReportRecord = ContractCitizenReport;
+export type BackendIncident = ContractIncident;
+export type TimelineEntry = ContractTimelineEntry;
+export type Event = ContractEvent;
 
 export interface ApiError {
   message: string;
@@ -107,6 +68,4 @@ export interface ApiError {
   code: string;
 }
 
-// Backwards-compatible name used by a few route declarations.
-export type Event = VenueEvent;
 export type Location = ReportLocation;

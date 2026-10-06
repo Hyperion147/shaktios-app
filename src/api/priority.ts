@@ -1,12 +1,9 @@
 import { apiRequest } from './client';
+import type { PriorityAssessment as SharedPriorityAssessment, Urgency } from '@/src/types';
 
-export type SuggestedUrgency = 'low' | 'medium' | 'high';
+export type SuggestedUrgency = Urgency;
 
-export interface PriorityAssessment {
-  suggested_urgency: SuggestedUrgency;
-  priority: boolean;
-  reasons: string[];
-}
+export type PriorityAssessment = SharedPriorityAssessment;
 
 const URGENCIES: readonly string[] = ['low', 'medium', 'high'];
 

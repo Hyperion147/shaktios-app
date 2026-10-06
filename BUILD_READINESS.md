@@ -8,15 +8,15 @@ The API and dashboard also pass their respective tests/build checks. The backend
 
 ## Checks actually verified
 
-| Check | Result |
-| --- | --- |
-| Mobile TypeScript + Node tests | Passed; 13 tests |
-| Expo SDK dependency check + `pnpm peers check` | Passed |
-| `pnpm dlx expo-doctor` | 21/22 checks pass; native dependency check is fixed, but the SDK 56 Hermes memory-regression check still fails |
-| Android + production web export | Passed; exports are not signed native artifacts |
-| Voice web browser flow | 6 scenarios passed against the production export using Chromium's fake microphone and intercepted Auth/API responses |
-| FastAPI | 167 tests passed, including 107 mocked voice tests; two existing deprecation warnings |
-| Dashboard | 16 tests, lint, typecheck, production build and 22 browser UI/scroll/map checks passed |
+| Check                                          | Result                                                                                                               |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Mobile TypeScript + Node tests                 | Passed; 13 tests                                                                                                     |
+| Expo SDK dependency check + `pnpm peers check` | Passed                                                                                                               |
+| `pnpm dlx expo-doctor`                         | 21/22 checks pass; native dependency check is fixed, but the SDK 56 Hermes memory-regression check still fails       |
+| Android + production web export                | Passed; exports are not signed native artifacts                                                                      |
+| Voice web browser flow                         | 6 scenarios passed against the production export using Chromium's fake microphone and intercepted Auth/API responses |
+| FastAPI                                        | 167 tests passed, including 107 mocked voice tests; two existing deprecation warnings                                |
+| Dashboard                                      | 16 tests, lint, typecheck, production build and 22 browser UI/scroll/map checks passed                               |
 
 The voice browser scenarios cover consent before multipart upload, multilingual/editable preview, exactly one explicit confirmed submission, 25-second automatic stop, microphone-track cleanup on exit, denied permissions and missing-key manual fallback. They do not establish actual Sarvam recognition quality or native audio behavior.
 
@@ -24,17 +24,17 @@ After the Metro peer repair, a stale web export produced a recoverable React Sus
 
 ## Structure and UX
 
-| Concern | Current boundary |
-| --- | --- |
-| Navigation | Expo Router screens in `app/`, with report/voice routes protected by the restored Supabase session |
-| Identity / selected venue / draft | `src/store/session.tsx`; native Auth and selected venue persistence use SecureStore; report drafts remain transient |
-| Operational HTTP | `src/api/`; FastAPI remains authoritative, not direct Supabase table access |
-| Voice recording | `src/hooks/useVoiceRecorder.ts`; foreground-only, capped at 25 seconds, temporary cache/Blob cleanup |
-| Voice draft contract | `src/types/voice.ts`, `src/utils/voice-draft.ts`; missing/invalid fields stay unselected |
-| Voice preview | `src/components/VoiceDraftPreview.tsx`; editable category, description, zone and urgency |
-| Final submission | `app/review.tsx`; voice-derived reports require a separate review confirmation before `POST /events` |
-| Visual assets | One shield/check mark across app and dashboard; native launcher/adaptive/splash/favicon assets described in `assets/BRAND.md` |
-| Radius hierarchy | Compact 4–12px web controls/panels; larger mobile touch targets retained intentionally |
+| Concern                           | Current boundary                                                                                                              |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Navigation                        | Expo Router screens in `app/`, with report/voice routes protected by the restored Supabase session                            |
+| Identity / selected venue / draft | `src/store/session.tsx`; native Auth and selected venue persistence use SecureStore; report drafts remain transient           |
+| Operational HTTP                  | `src/api/`; FastAPI remains authoritative, not direct Supabase table access                                                   |
+| Voice recording                   | `src/hooks/useVoiceRecorder.ts`; foreground-only, capped at 25 seconds, temporary cache/Blob cleanup                          |
+| Voice draft contract              | `src/types/voice.ts`, `src/utils/voice-draft.ts`; missing/invalid fields stay unselected                                      |
+| Voice preview                     | `src/components/VoiceDraftPreview.tsx`; editable category, description, zone and urgency                                      |
+| Final submission                  | `app/review.tsx`; voice-derived reports require a separate review confirmation before `POST /events`                          |
+| Visual assets                     | One shield/check mark across app and dashboard; native launcher/adaptive/splash/favicon assets described in `assets/BRAND.md` |
+| Radius hierarchy                  | Compact 4–12px web controls/panels; larger mobile touch targets retained intentionally                                        |
 
 Manual reporting remains a first-class alternative. Voice cannot invent GPS or caller identity, choose a different venue, submit a report by itself, or dispatch a response. All eight category meanings and existing Lucide functional icons are retained. Low/medium/high urgency is now preserved in the report payload instead of collapsing low/medium into `normal`.
 
@@ -72,6 +72,7 @@ The emulator also showed an older Metro compilation error for `@rn-primitives/sl
    - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: publishable/anon key only.
 
    The current `http://10.0.2.2:8000` fallback is **Android-emulator-only**. It is not suitable for a physical-device or release build. Do not ship a placeholder host or weaken production network security to conceal an unreachable API. Expo embeds these values at build/export time. Configure web CORS for the actual web origin if exporting web.
+
 4. **Build and install the actual artifact** after those choices:
 
    ```powershell
